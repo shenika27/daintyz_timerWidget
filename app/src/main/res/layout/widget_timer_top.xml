@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  layoutMode = "top" (기본값)
+  구조: [타이머 영역 2x1] 위 / [캐릭터 영역 2x2] 아래
+  TODO(1차 구현): RemoteViews 호환 위젯 XML로 실제 작성
+  - 타이머 텍스트 + -/+ 버튼 + 시작/일시정지/중단 버튼 id는
+    widget_timer_bottom.xml과 동일하게 맞출 것 (설계 문서 2-1 참고)
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- TODO: 타이머 영역 (2x1) - include layout/widget_section_timer.xml -->
+
+    <!-- TODO: 캐릭터 영역 (2x2) - include layout/widget_section_character.xml -->
+
+</LinearLayout>

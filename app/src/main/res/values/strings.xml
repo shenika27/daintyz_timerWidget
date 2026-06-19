@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">캐릭터 타이머</string>
+
+    <!-- 위젯 -->
+    <string name="widget_description">런닝머신 위에서 뛰는 캐릭터 타이머 위젯</string>
+</resources>

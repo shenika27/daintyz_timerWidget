@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  앱 메인 화면: 증감 단위 자유 설정(숫자패드), 타이머 상태 동기화 표시,
+  타이머 위/아래 배치 전환 토글, 스킨 선택 화면 진입점
+  TODO(1차 구현)
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+</LinearLayout>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  스킨 선택 화면: 잠금/해제 상태 표현 가능한 구조 (설계 문서 6-4)
+  1차 버전: 모든 스킨 무료 → 전부 해제 상태로 표시
+  TODO(1차 구현): RecyclerView + 스킨 카드(썸네일/이름/잠금아이콘)
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+</LinearLayout>

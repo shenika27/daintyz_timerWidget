@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 5. 권한 처리 (설계 문서 참고) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- targetSdk 34+ 대응 구체 타입은 1차 구현 시 확정 (예: FOREGROUND_SERVICE_SPECIAL_USE) -->
+    <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" /> -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.DaintyzTimerWidget">
+
+        <!-- TODO(1차 구현): 메인 앱 화면 Activity -->
+        <!--
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        -->
+
+        <!-- TODO(1차 구현): 위젯 Provider -->
+        <!--
+        <receiver
+            android:name=".widget.CharacterTimerWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+        -->
+
+        <!-- TODO(1차 구현): 화면 ON/OFF 감지는 동적 등록(BroadcastReceiver)으로 처리 -->
+
+        <!-- TODO(1차 구현): 재부팅/사망 복구용 BootReceiver -->
+        <!--
+        <receiver
+            android:name=".receiver.BootCompletedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        -->
+
+        <!-- TODO(1차 구현): 타이머 진행/일시정지 추적용 Foreground Service -->
+        <!--
+        <service
+            android:name=".service.TimerForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+        -->
+
+    </application>
+
+</manifest>

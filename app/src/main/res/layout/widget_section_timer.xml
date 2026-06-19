@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  타이머 영역 (2x1): 시간 표시 + 조작 버튼
+  top/bottom 레이아웃에서 공통으로 include하여 버튼 id를 통일한다.
+  TODO(1차 구현):
+    - tv_timer_value (시간 텍스트)
+    - btn_minus / btn_plus (정지 상태 시간 증감)
+    - btn_start_pause (▶/|| 토글)
+    - btn_stop_reset (ㅁ 중단/리셋)
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+</LinearLayout>

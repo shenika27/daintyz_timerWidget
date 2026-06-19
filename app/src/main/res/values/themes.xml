@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DaintyzTimerWidget" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- TODO(1차 구현): 테마 속성 채우기 -->
+    </style>
+</resources>

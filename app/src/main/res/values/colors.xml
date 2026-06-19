@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TODO(1차 구현): 디자인 확정 후 색상 채우기 -->
+    <color name="widget_background">#FFFFFF</color>
+    <color name="widget_text_primary">#212121</color>
+</resources>
