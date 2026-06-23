@@ -41,6 +41,11 @@
             android:name=".ui.SkinDetailActivity"
             android:exported="false" />
 
+        <!-- 적용 미리보기 화면 (캐릭터/타이머 공용, 상태 탭 라이브 렌더) -->
+        <activity
+            android:name=".ui.PreviewActivity"
+            android:exported="false" />
+
         <!-- 위젯 Provider -->
         <receiver
             android:name=".widget.CharacterTimerWidgetProvider"

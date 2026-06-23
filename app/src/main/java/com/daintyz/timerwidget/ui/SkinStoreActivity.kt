@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.daintyz.timerwidget.R
@@ -39,6 +40,9 @@ class SkinStoreActivity : AppCompatActivity() {
 
     /** 체크 시 구매(보유)한 항목도 표시. 기본은 미구매만. */
     private var showAll = false
+
+    /** 현재 다운로드 중인 skinId — 카드가 매 renderList마다 새로 그려져도 버튼 상태를 유지. */
+    private val downloadingIds = mutableSetOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,19 +110,25 @@ class SkinStoreActivity : AppCompatActivity() {
             else thumb.setImageResource(R.drawable.frame_placeholder)
         }
         card.findViewById<TextView>(R.id.tv_skin_name).text = skin.name
+        bindTag(card, skin.hasCustomTimer)
 
         val available = SkinAvailabilityChecker.isSkinAvailable(skin, purchasedSkinIds)
         card.findViewById<TextView>(R.id.tv_skin_badge).text =
             if (available) getString(R.string.skin_badge_owned) else getString(R.string.skin_badge_locked)
-        card.findViewById<Button>(R.id.btn_skin_action).visibility = View.GONE
+
+        // 보유(사용 가능)면 액션 버튼 숨김. 잠긴(유료 미보유) 로컬 테마는 구매(스텁).
+        val action = card.findViewById<Button>(R.id.btn_skin_action)
+        if (available) {
+            action.visibility = View.GONE
+        } else {
+            action.visibility = View.VISIBLE
+            action.isEnabled = true
+            action.text = getString(R.string.skin_btn_buy)
+            action.setOnClickListener { buyStub() }
+        }
 
         card.setOnClickListener {
-            openDetail(
-                skinId = skin.skinId,
-                name = skin.name,
-                isFree = skin.isFree,
-                owned = available
-            )
+            openDetail(skinId = skin.skinId, name = skin.name, isFree = skin.isFree, owned = available)
         }
     }
 
@@ -127,9 +137,30 @@ class SkinStoreActivity : AppCompatActivity() {
             card.findViewById(R.id.iv_skin_thumb), entry.thumbnailUrl, R.drawable.frame_placeholder
         )
         card.findViewById<TextView>(R.id.tv_skin_name).text = entry.name
+        bindTag(card, entry.hasTimer)
         card.findViewById<TextView>(R.id.tv_skin_badge).text =
             if (entry.isFree) getString(R.string.skin_badge_free) else getString(R.string.skin_badge_locked)
-        card.findViewById<Button>(R.id.btn_skin_action).visibility = View.GONE
+
+        // 카탈로그(미다운로드) 테마: 무료=다운로드, 유료=구매(스텁). 다운로드 중이면 비활성 표시.
+        val action = card.findViewById<Button>(R.id.btn_skin_action)
+        action.visibility = View.VISIBLE
+        when {
+            entry.skinId in downloadingIds -> {
+                action.text = getString(R.string.skin_btn_downloading)
+                action.isEnabled = false
+                action.setOnClickListener(null)
+            }
+            entry.isFree -> {
+                action.text = getString(R.string.skin_btn_download)
+                action.isEnabled = true
+                action.setOnClickListener { startDownload(entry) }
+            }
+            else -> {
+                action.text = getString(R.string.skin_btn_buy)
+                action.isEnabled = true
+                action.setOnClickListener { buyStub() }
+            }
+        }
 
         card.setOnClickListener {
             openDetail(
@@ -138,10 +169,45 @@ class SkinStoreActivity : AppCompatActivity() {
                 isFree = entry.isFree,
                 owned = false,
                 zipUrl = entry.zipUrl,
-                previewStopUrl = entry.previewStopUrl,
-                previewRunningUrl = entry.previewRunningUrl
+                previewBaseUrl = entry.previewStopUrl.substringBefore("/preview/")
             )
         }
+    }
+
+    /** 테마 타입 태그(캐릭터+타이머 vs 캐릭터). */
+    private fun bindTag(card: View, hasTimer: Boolean) {
+        card.findViewById<TextView>(R.id.tv_skin_tag).apply {
+            visibility = View.VISIBLE
+            text = getString(
+                if (hasTimer) R.string.skin_tag_with_timer else R.string.skin_tag_character_only
+            )
+        }
+    }
+
+    private fun buyStub() {
+        // TODO: Google Play Billing 연동. 결제 성공 시 purchasedSkinIds에 skinId 추가 후 다운로드.
+        Toast.makeText(this, getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun startDownload(entry: RemoteSkinEntry) {
+        downloadingIds.add(entry.skinId)
+        renderList()
+        SkinDownloader.download(
+            context = this,
+            entry = entry,
+            onProgress = { },
+            onComplete = { success ->
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    downloadingIds.remove(entry.skinId)
+                    val msg = if (success)
+                        "${entry.name} ${getString(R.string.skin_download_complete)}"
+                    else getString(R.string.skin_download_fail)
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                    renderList()
+                }
+            }
+        )
     }
 
     private fun openDetail(
@@ -150,8 +216,7 @@ class SkinStoreActivity : AppCompatActivity() {
         isFree: Boolean,
         owned: Boolean,
         zipUrl: String? = null,
-        previewStopUrl: String = SkinRepoUrls.previewStop(skinId),
-        previewRunningUrl: String = SkinRepoUrls.previewRunning(skinId)
+        previewBaseUrl: String = SkinRepoUrls.ASSET_BASE
     ) {
         startActivity(Intent(this, SkinDetailActivity::class.java).apply {
             putExtra(SkinDetailActivity.EXTRA_SKIN_ID, skinId)
@@ -159,8 +224,7 @@ class SkinStoreActivity : AppCompatActivity() {
             putExtra(SkinDetailActivity.EXTRA_IS_FREE, isFree)
             putExtra(SkinDetailActivity.EXTRA_OWNED, owned)
             putExtra(SkinDetailActivity.EXTRA_ZIP_URL, zipUrl)
-            putExtra(SkinDetailActivity.EXTRA_PREVIEW_STOP, previewStopUrl)
-            putExtra(SkinDetailActivity.EXTRA_PREVIEW_RUNNING, previewRunningUrl)
+            putExtra(SkinDetailActivity.EXTRA_PREVIEW_BASE, previewBaseUrl)
         })
     }
 }
