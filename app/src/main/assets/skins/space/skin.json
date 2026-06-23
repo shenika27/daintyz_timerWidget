@@ -2,8 +2,8 @@
   "skinId": "space",
   "name": "우주",
   "isFree": false,
-  "states": {
-    "idle": {
+  "character": {
+    "stop": {
       "frames": ["idle_01.png"],
       "frameDurationMs": 1000
     },

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- 위젯 타이머 조작 버튼.
+         "기능=영역, 버튼=그림" 구조: ImageView 자체가 항상 클릭 영역이고,
+         보이는 기호는 스킨(또는 디폴트 벡터)이 그린다. 노스킨이면 그림만 투명 처리. -->
+    <style name="WidgetTimerButton">
+        <!-- 폭은 weight로 칸을 균등 분할(고정폭 X) → 구분선이 박스 정중앙에 오고
+             아이콘이 각 칸 중앙에 위치한다. idle=3등분, running=2등분으로 상태에 따라 자동. -->
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:padding">5dp</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:scaleType">fitCenter</item>
+    </style>
+
+    <!-- 버튼 사이 세로 구분선 (ImageView — 색/이미지 모두 코드에서 설정).
+         기본 폭 1dp는 색 전용. 이미지 사용 시 dividersWidthDp로 런타임 변경.
+         높이 match_parent: 위로는 가로 구분선, 아래로는 박스 하단에 붙는다. -->
+    <style name="WidgetButtonDivider">
+        <item name="android:layout_width">1dp</item>
+        <item name="android:layout_height">match_parent</item>
+    </style>
+
+</resources>

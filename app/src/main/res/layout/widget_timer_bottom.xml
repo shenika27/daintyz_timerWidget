@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  layoutMode = "bottom"
-  구조: [캐릭터 영역 2x2] 위 / [타이머 영역 2x1] 아래
-  TODO(1차 구현): widget_timer_top.xml과 동일한 버튼/ImageView id 사용 필수
+  layoutMode = "bottom": [캐릭터 2x2] 위 / [타이머 2x1] 아래.
+  widget_timer_top.xml과 동일한 섹션 include → 버튼/ImageView id 동일 (설계 문서 2-1).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- TODO: 캐릭터 영역 (2x2) - include layout/widget_section_character.xml -->
+    <include layout="@layout/widget_section_character_above" />
 
-    <!-- TODO: 타이머 영역 (2x1) - include layout/widget_section_timer.xml -->
+    <include layout="@layout/widget_section_timer" />
 
 </LinearLayout>

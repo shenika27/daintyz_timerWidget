@@ -3,27 +3,136 @@ package com.daintyz.timerwidget.model
 /**
  * skin.json 스키마에 대응하는 데이터 클래스 (설계 문서 6-2 참고).
  *
- * TODO(1차 구현):
- * data class Skin(
- *     val skinId: String,
- *     val name: String,
- *     val isFree: Boolean,
- *     val states: SkinStates
- * )
- *
- * data class SkinStates(
- *     val idle: FrameSet,
- *     val running: RunningState,   // default 서브키로 한 단계 감싸 향후 컨디션 분기 대비
- *     val complete: FrameSet
- * )
- *
- * data class RunningState(
- *     val default: FrameSet
- *     // 1차 버전에서는 default만 사용. 향후 tired/fresh 등 조건부 키 추가 예정.
- * )
- *
- * data class FrameSet(
- *     val frames: List<String>,
- *     val frameDurationMs: Long
- * )
+ * 신규 스킨은 코드 수정 없이 assets/skins/<id>/ 폴더 + skin.json 추가만으로 확장된다.
  */
+data class Skin(
+    val skinId: String,
+    val name: String,
+    val isFree: Boolean,
+    val character: CharacterStates,
+    /**
+     * 타이머 영역 스킨 (설계: "기능=영역, 버튼=그림").
+     * skin.json에 timer 블록이 있으면 그 값으로, 없으면 기본 스킨(내장 박스/구분선/기호 버튼)으로 채워진다.
+     * 노스킨(투명·탭만)은 timer 블록에 showBox:false, buttonStyle:"none" 등을 명시해 표현한다.
+     * (파싱 단계에서 항상 채워지므로 실질적으로 non-null이지만, 안전을 위해 nullable 유지)
+     */
+    val timer: TimerSkin?
+)
+
+/**
+ * 타이머 영역의 시각 요소를 스킨이 그릴지 결정한다.
+ * 1차: 디폴트(현재 모습) / 노스킨(전부 없음) 두 가지를 boolean/enum으로 표현.
+ * 추후 유료 스킨은 여기에 배경/버튼 PNG 파일명을 추가해 확장한다.
+ */
+data class TimerSkin(
+    /**
+     * 스킨이 그린 박스 배경 PNG 파일명(스킨 폴더 기준). null이면 내장 박스(showBox)로 폴백.
+     * 지정되면 박스 영역 뒤에 fitXY로 깔리고, 내장 박스 모양은 끈다.
+     */
+    val background: String?,
+    /** 박스 배경(테두리 포함)을 그릴지. false면 투명. (background가 있으면 무시) */
+    val showBox: Boolean,
+    /** 숫자/버튼 사이 가로선을 그릴지. 배경 이미지에 넣을 경우 false. */
+    val showDividerH: Boolean,
+    /** 가로 구분선 이미지 파일명(스킨 폴더 기준). 지정 시 색 대신 PNG를 그린다. */
+    val dividerHImage: String?,
+    /** 가로 구분선 높이(dp). dividerHImage 사용 시 필수 조정. null이면 기본값 1dp. */
+    val dividerHHeightDp: Float?,
+    /** 버튼 사이 세로선을 그릴지. 버튼 수가 상태마다 달라 배경 이미지로 대체 불가. */
+    val showDividers: Boolean,
+    /** 구분선 색. "#RRGGBB" 또는 "#AARRGGBB". null이면 기본값(#2B2B2B) 유지. dividersImage가 있으면 무시. */
+    val dividersColor: String?,
+    /** 세로 구분선 이미지 파일명(스킨 폴더 기준). 지정 시 색 대신 PNG를 그린다. */
+    val dividersImage: String?,
+    /** 세로 구분선 폭(dp). dividersImage 사용 시 의미있는 값으로 지정. null이면 기본값 1dp. */
+    val dividersWidthDp: Float?,
+    /** 버튼 그림 방식. */
+    val buttonStyle: ButtonStyle,
+    /**
+     * buttonStyle == SKIN일 때 사용할 버튼 PNG 파일명(스킨 폴더 기준).
+     * 누락된 심볼은 내장 벡터로 폴백한다. SKIN이 아니면 무시된다.
+     */
+    val buttons: TimerButtons?,
+    /**
+     * 타이머 숫자 글꼴 지정. 위젯에서 숫자는 편집 불가이므로 스킨이 글꼴/색/크기를 정한다.
+     * null이면 레이아웃 기본값(monospace / timer_digit / 30sp)을 그대로 쓴다.
+     */
+    val font: TimerFont?
+)
+
+/**
+ * 타이머 숫자 폰트. 각 필드 null이면 해당 속성은 레이아웃 기본값 유지.
+ * family는 RemoteViews가 지원하는 내장 패밀리명(monospace, sans-serif, serif, sans-serif-condensed 등).
+ * 커스텀 .ttf는 1차 미지원(추후 비트맵 렌더링으로 확장).
+ */
+data class TimerFont(
+    val family: String?,
+    /** "#RRGGBB" 또는 "#AARRGGBB". */
+    val color: String?,
+    val sizeSp: Float?
+)
+
+/**
+ * 스킨이 직접 그린 버튼 PNG 파일명 (스킨 폴더 기준). 각 필드 null이면 그 심볼만 내장 벡터로 폴백.
+ * 한 슬롯(start_pause)이 상태에 따라 play/pause로 갈리므로 심볼 단위(5개)로 받는다.
+ */
+data class TimerButtons(
+    val minus: String?,
+    val plus: String?,
+    val play: String?,
+    val pause: String?,
+    val stop: String?
+)
+
+enum class ButtonStyle {
+    /** 내장 기호 벡터(ic_btn_*)를 그린다. */
+    DEFAULT,
+    /** 버튼 그림 없음(투명). 탭 영역은 유지. */
+    NONE,
+    /** 스킨이 제공한 버튼 PNG를 그린다(누락 심볼은 내장 벡터 폴백). 탭 영역은 유지. */
+    SKIN;
+
+    companion object {
+        fun fromKey(key: String?): ButtonStyle =
+            entries.firstOrNull { it.name.equals(key, ignoreCase = true) } ?: DEFAULT
+    }
+}
+
+data class CharacterStates(
+    /** 정지(타이머 미작동) 상태 캐릭터. (이전 명칭: idle) */
+    val stop: FrameSet,
+    /** default 서브키로 한 단계 감싸 향후 컨디션 분기(tired/fresh 등) 대비 (설계 문서 6-2). */
+    val running: RunningState,
+    /** 일시정지 상태 전용 캐릭터. null이면 stop 프레임으로 폴백. */
+    val pause: FrameSet?,
+    val complete: FrameSet
+)
+
+/**
+ * running 상태의 프레임셋 묶음.
+ * 1차 버전에서는 [default]만 사용. 향후 조건부 키(tired/fresh 등)를 [conditional]에 채워 넣는다.
+ * 폴백 규칙: 조건에 맞는 분기 프레임셋이 없으면 항상 [default]로 폴백 (설계 문서 6-2 필수 규칙).
+ */
+data class RunningState(
+    val default: FrameSet,
+    val conditional: List<ConditionalFrameSet> = emptyList()
+)
+
+/**
+ * 향후 컨디션 분기용 프레임셋 (1차 버전 미사용 — 스키마 자리만 마련).
+ * 예: condition = { "type": "remainingTime", "lte": 600 }
+ */
+data class ConditionalFrameSet(
+    val key: String,
+    val frameSet: FrameSet,
+    val condition: Map<String, Any?>
+)
+
+data class FrameSet(
+    val frames: List<String>,
+    val frameDurationMs: Long
+) {
+    init {
+        require(frames.isNotEmpty()) { "FrameSet은 최소 1개의 프레임이 필요합니다." }
+    }
+}

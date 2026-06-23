@@ -4,4 +4,68 @@
 
     <!-- 위젯 -->
     <string name="widget_description">런닝머신 위에서 뛰는 캐릭터 타이머 위젯</string>
+    <string name="default_timer_value">10:00</string>
+    <string name="timer_complete_label">완료</string>
+
+    <!-- 위젯 버튼 기호 -->
+    <string name="sym_minus">−</string>
+    <string name="sym_plus">+</string>
+    <string name="sym_play">▶</string>
+    <string name="sym_pause">II</string>
+    <string name="sym_stop">□</string>
+
+    <!-- 접근성 라벨 -->
+    <string name="cd_minus">시간 감소</string>
+    <string name="cd_plus">시간 증가</string>
+    <string name="cd_start">시작/일시정지</string>
+    <string name="cd_stop">중단</string>
+    <string name="cd_character">캐릭터</string>
+
+    <!-- 알림 -->
+    <string name="notif_channel_progress_name">타이머 진행</string>
+    <string name="notif_channel_progress_desc">타이머가 진행 중일 때 표시되는 알림</string>
+    <string name="notif_channel_complete_name">타이머 완료</string>
+    <string name="notif_channel_complete_desc">타이머가 끝났을 때 표시되는 알림</string>
+    <string name="notif_progress_title">타이머 진행 중</string>
+    <string name="notif_complete_title">타이머 완료!</string>
+    <string name="notif_complete_text">설정한 시간이 끝났어요.</string>
+
+    <!-- 메인 화면 -->
+    <string name="main_title">캐릭터 타이머</string>
+    <string name="label_state">상태</string>
+    <string name="label_remaining">남은 시간</string>
+    <string name="label_step">증감 단위(분)</string>
+    <string name="label_layout_mode">타이머 위치</string>
+    <string name="layout_top">위 (타이머가 위)</string>
+    <string name="layout_bottom">아래 (타이머가 아래)</string>
+    <string name="btn_save_step">단위 저장</string>
+    <string name="btn_open_skins">스킨 설정</string>
+    <string name="btn_open_store">상점</string>
+    <string name="hint_step">증감 단위(분)을 입력</string>
+
+    <!-- 스킨 설정(적용) 화면 -->
+    <string name="skin_select_title">스킨 설정</string>
+    <string name="skin_tab_character">캐릭터</string>
+    <string name="skin_tab_timer">타이머</string>
+    <string name="skin_badge_free">무료</string>
+    <string name="skin_badge_locked">잠김</string>
+    <string name="skin_badge_selected">선택됨</string>
+    <string name="skin_badge_owned">보유 중</string>
+    <string name="skin_btn_select">선택</string>
+    <string name="skin_btn_buy">구매</string>
+    <string name="skin_btn_download">다운로드</string>
+    <string name="skin_btn_downloading">다운로드 중…</string>
+    <string name="skin_badge_downloading">다운로드 중…</string>
+    <string name="skin_download_complete">다운로드 완료</string>
+    <string name="skin_download_fail">다운로드 실패. 다시 시도해주세요.</string>
+    <string name="skin_apply_empty">사용 가능한 스킨이 없습니다. 상점에서 받아보세요.</string>
+
+    <!-- 상점/상세 화면 -->
+    <string name="store_title">상점</string>
+    <string name="store_detail_title">테마 상세</string>
+    <string name="store_set_label">캐릭터 + 타이머 세트</string>
+    <string name="preview_state_stop">정지</string>
+    <string name="preview_state_running">진행중</string>
+    <string name="store_buy_stub">구매 기능은 준비 중입니다</string>
+    <string name="store_go_apply">스킨 설정에서 적용하기</string>
 </resources>

@@ -1,0 +1,31 @@
+{
+  "skinId": "pang",
+  "name": "팡",
+  "isFree": true,
+  "timer": {
+    "showBox": true,
+    "showDividers": true,
+    "buttonStyle": "default",
+    "font": {
+      "family": "monospace",
+      "color": "#1A1A1A",
+      "sizeSp": 30
+    }
+  },
+  "character": {
+    "stop": {
+      "frames": ["idle_01.png"],
+      "frameDurationMs": 1000
+    },
+    "running": {
+      "default": {
+        "frames": ["run_01.png", "run_02.png", "run_03.png", "run_04.png", "run_03.png", "run_02.png"],
+        "frameDurationMs": 250
+      }
+    },
+    "complete": {
+      "frames": ["run_04.png", "run_03.png", "run_02.png", "run_03.png"],
+      "frameDurationMs": 250
+    }
+  }
+}

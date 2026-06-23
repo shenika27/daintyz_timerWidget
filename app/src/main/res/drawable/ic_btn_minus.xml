@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기본(노스킨이 아닌 디폴트) 타이머 버튼 기호: 감소 − -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/timer_digit">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M5,11 H19 V13.4 H5 Z" />
+</vector>

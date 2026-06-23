@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- TODO(1차 구현): 디자인 확정 후 색상 채우기 -->
-    <color name="widget_background">#FFFFFF</color>
-    <color name="widget_text_primary">#212121</color>
+    <color name="widget_background">#FFF7EC</color>
+    <color name="widget_text_primary">#3A2E1F</color>
+    <color name="widget_button_bg">#FFE2B8</color>
+
+    <color name="primary">#E89B3B</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#212121</color>
+
+    <color name="placeholder_bg">#00000000</color>
+    <color name="placeholder_fg">#7A5C34</color>
+
+    <!-- 타이머 디지털 박스 -->
+    <color name="timer_box_fill">#FFFFFF</color>
+    <color name="timer_box_border">#2B2B2B</color>
+    <color name="timer_digit">#1A1A1A</color>
 </resources>

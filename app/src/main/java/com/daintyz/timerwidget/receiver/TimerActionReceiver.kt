@@ -1,11 +1,38 @@
 package com.daintyz.timerwidget.receiver
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import com.daintyz.timerwidget.controller.TimerController
+import com.daintyz.timerwidget.service.TimerForegroundService
+
 /**
- * 위젯 버튼(+/-/▶/||/ㅁ)에서 발송하는 PendingIntent(getBroadcast) 액션 수신.
+ * 위젯 버튼(+/-/▶/||/■)과 알람 복구 트리거의 액션 수신 (설계 문서 3-2, 4-1).
  *
- * TODO(1차 구현):
- * - CharacterTimerWidgetProvider.onReceive에서 위임받거나 별도 등록
- * - 액션별 상태 전환: Idle -> Running -> (Paused <-> Running) -> Complete -> Idle
- * - 상태 변경 후 TimerForegroundService 시작/정지 + WidgetUpdater로 즉시 갱신
+ * 모든 상태 전환은 [TimerController]에 위임하여 한 곳에서 처리한다.
  */
-class TimerActionReceiver
+class TimerActionReceiver : BroadcastReceiver() {
+
+    override fun onReceive(context: Context, intent: Intent) {
+        when (intent.action) {
+            ACTION_PLUS -> TimerController.increment(context)
+            ACTION_MINUS -> TimerController.decrement(context)
+            ACTION_START_PAUSE -> TimerController.startOrPause(context)
+            ACTION_STOP_RESET -> TimerController.stopReset(context)
+            ACTION_TAP_COMPLETE -> TimerController.resetFromComplete(context)
+            ACTION_ALARM_CHECK -> {
+                // 화면 꺼짐 중 완료 시점 깨어남(또는 사망 복구): 서비스가 평가하도록 재시작.
+                TimerForegroundService.resync(context)
+            }
+        }
+    }
+
+    companion object {
+        const val ACTION_PLUS = "com.daintyz.timerwidget.action.PLUS"
+        const val ACTION_MINUS = "com.daintyz.timerwidget.action.MINUS"
+        const val ACTION_START_PAUSE = "com.daintyz.timerwidget.action.START_PAUSE"
+        const val ACTION_STOP_RESET = "com.daintyz.timerwidget.action.STOP_RESET"
+        const val ACTION_TAP_COMPLETE = "com.daintyz.timerwidget.action.TAP_COMPLETE"
+        const val ACTION_ALARM_CHECK = "com.daintyz.timerwidget.action.ALARM_CHECK"
+    }
+}

@@ -1,21 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 5. 권한 처리 (설계 문서 참고) -->
+    <!-- 5. 권한 처리 (설계 문서 5장) -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- targetSdk 34+ 대응 구체 타입은 1차 구현 시 확정 (예: FOREGROUND_SERVICE_SPECIAL_USE) -->
-    <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" /> -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- SCHEDULE_EXACT_ALARM은 선언하지 않음: 프레임은 핸들러 틱, 알람은 inexact 복구용 (설계 문서 4-1, 5장) -->
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:supportsRtl="true"
         android:theme="@style/Theme.DaintyzTimerWidget">
 
-        <!-- TODO(1차 구현): 메인 앱 화면 Activity -->
-        <!--
+        <!-- 메인 앱 화면 -->
         <activity
             android:name=".ui.MainActivity"
             android:exported="true">
@@ -24,10 +25,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        -->
 
-        <!-- TODO(1차 구현): 위젯 Provider -->
-        <!--
+        <!-- 스킨 설정(적용) 화면 -->
+        <activity
+            android:name=".ui.SkinSelectActivity"
+            android:exported="false" />
+
+        <!-- 상점 목록 화면 -->
+        <activity
+            android:name=".ui.SkinStoreActivity"
+            android:exported="false" />
+
+        <!-- 테마 상세/미리보기 화면 -->
+        <activity
+            android:name=".ui.SkinDetailActivity"
+            android:exported="false" />
+
+        <!-- 위젯 Provider -->
         <receiver
             android:name=".widget.CharacterTimerWidgetProvider"
             android:exported="true">
@@ -38,12 +52,13 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
         </receiver>
-        -->
 
-        <!-- TODO(1차 구현): 화면 ON/OFF 감지는 동적 등록(BroadcastReceiver)으로 처리 -->
+        <!-- 위젯 버튼/알람 액션 수신 (명시적 인텐트만 받으므로 exported=false) -->
+        <receiver
+            android:name=".receiver.TimerActionReceiver"
+            android:exported="false" />
 
-        <!-- TODO(1차 구현): 재부팅/사망 복구용 BootReceiver -->
-        <!--
+        <!-- 재부팅 복구 -->
         <receiver
             android:name=".receiver.BootCompletedReceiver"
             android:exported="true">
@@ -51,15 +66,18 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-        -->
 
-        <!-- TODO(1차 구현): 타이머 진행/일시정지 추적용 Foreground Service -->
-        <!--
+        <!-- 타이머 진행/완료 추적용 포그라운드 서비스 -->
         <service
             android:name=".service.TimerForegroundService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
-        -->
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="character_timer_animation" />
+        </service>
+
+        <!-- ScreenStateReceiver는 SCREEN_ON/OFF 제약상 서비스가 동적 등록 (매니페스트 정적 등록 불가) -->
 
     </application>
 

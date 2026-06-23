@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  캐릭터가 타이머 "아래"에 오는 배치(= top 레이아웃 모드)용 섹션.
+  이미지를 영역 상단(layout_gravity=top)에 붙여 위 타이머와의 공백을 줄인다.
+  남는 세로 여백은 캐릭터 아래쪽으로 몰린다. id는 공통 섹션과 동일하게 iv_character 유지.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="3"
+    android:background="@android:color/transparent">
+
+    <ImageView
+        android:id="@+id/iv_character"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/cd_character"
+        android:scaleType="fitCenter" />
+
+</FrameLayout>

@@ -1,11 +1,22 @@
 package com.daintyz.timerwidget.receiver
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import com.daintyz.timerwidget.service.TimerForegroundService
+
 /**
- * ACTION_SCREEN_ON / ACTION_SCREEN_OFF 감지용 동적 등록 BroadcastReceiver.
+ * ACTION_SCREEN_ON / ACTION_SCREEN_OFF 감지용 동적 등록 BroadcastReceiver (설계 문서 4-2).
  *
- * TODO(1차 구현):
- * - TimerForegroundService 내부에서 동적 등록/해제 (매니페스트 정적 등록 불가 - 시스템 제약)
- * - 화면 ON: 남은 시간 기준 프레임 재계산 후 1초 틱 애니메이션 재개
- * - 화면 OFF: 프레임 갱신 중단, 시간 추적만 계속 (설계 문서 4-2)
+ * SCREEN_ON/OFF는 매니페스트 정적 등록이 불가하므로 [TimerForegroundService]가 onCreate에서 동적 등록한다.
+ * 수신 시 서비스에 화면 상태를 전달 → 화면 ON일 때만 1초 틱(애니메이션) 수행.
  */
-class ScreenStateReceiver
+class ScreenStateReceiver : BroadcastReceiver() {
+
+    override fun onReceive(context: Context, intent: Intent) {
+        when (intent.action) {
+            Intent.ACTION_SCREEN_ON -> TimerForegroundService.notifyScreen(context, on = true)
+            Intent.ACTION_SCREEN_OFF -> TimerForegroundService.notifyScreen(context, on = false)
+        }
+    }
+}
