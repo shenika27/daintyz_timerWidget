@@ -68,12 +68,12 @@ object WidgetUpdater {
         val timerSkin = SkinRepository.findSkin(context, data.selectedTimerSkinId) ?: fallback
 
         applyTimerText(views, data, nowElapsed, timerSkin?.timer)
-        applyButtonVisibility(context, views, data.state, timerSkin)
+        applyButtonVisibility(views, data.state)
         applyButtonGraphics(context, views, data.state, timerSkin)
         applyTimerChrome(context, views, timerSkin)
         applyCharacterFrame(context, views, characterSkin, data, nowElapsed)
         if (!forPreview) {
-            applyButtonActions(context, views)
+            applyButtonActions(context, views, data.state)
             applyCharacterClick(context, views, data.state)
         }
 
@@ -83,7 +83,7 @@ object WidgetUpdater {
     // ---- 시간 텍스트 ----
 
     private fun applyTimerText(views: RemoteViews, data: TimerData, nowElapsed: Long, timerSkin: TimerSkin?) {
-        // 완료 상태에선 남은 시간이 0 → "00:00"으로 표시된다. ("완료" 안내는 버튼 행 자리의 tv_complete가 담당)
+        // 완료 상태에선 남은 시간이 0 → "00:00"으로 표시된다. (완료 화면은 IDLE과 동일, 시간 탭만 초기화 동작)
         val text = formatMillis(data.remainingMillis(nowElapsed))
         views.setTextViewText(R.id.tv_timer_value, text)
 
@@ -94,11 +94,7 @@ object WidgetUpdater {
         val font = timerSkin?.font ?: return
         font.color
             ?.let { runCatching { Color.parseColor(it) }.getOrNull() }
-            ?.let {
-                views.setTextColor(R.id.tv_timer_value, it)
-                // 완료 안내 텍스트도 동일한 스킨 글자색을 따른다 (크기는 버튼 행에 맞춘 자체 값 유지).
-                views.setTextColor(R.id.tv_complete, it)
-            }
+            ?.let { views.setTextColor(R.id.tv_timer_value, it) }
         font.sizeSp?.let { views.setTextViewTextSize(R.id.tv_timer_value, TypedValue.COMPLEX_UNIT_SP, it) }
     }
 
@@ -111,31 +107,15 @@ object WidgetUpdater {
 
     // ---- 버튼 가시성 (상태별) ----
 
-    private fun applyButtonVisibility(context: Context, views: RemoteViews, state: TimerState, skin: Skin?) {
-        val timerSkin = skin?.timer
-        // 어떤 버튼 '영역'이 현재 상태에서 활성인지 (그림 유무와 무관, 탭 영역 기준).
-        val minusOn = state == TimerState.IDLE
-        val plusOn = state == TimerState.IDLE
-        val startPauseOn = state == TimerState.IDLE || state == TimerState.RUNNING || state == TimerState.PAUSED
-        val stopOn = state == TimerState.RUNNING || state == TimerState.PAUSED
+    private fun applyButtonVisibility(views: RemoteViews, state: TimerState) {
+        // 항상 2버튼: 정지/완료 → [+][−], 진행/중지 → [일시정지·재생][정지]. (탭 영역 기준)
+        val minusPlusOn = state == TimerState.IDLE || state == TimerState.COMPLETE
+        val startStopOn = state == TimerState.RUNNING || state == TimerState.PAUSED
 
-        // 완료: 버튼 행 전체를 "완료" 텍스트 하나로 대체. 탭하면 정지(IDLE) 복귀.
-        val isComplete = state == TimerState.COMPLETE
-        views.setViewVisibility(R.id.btn_row, vis(!isComplete))
-        views.setViewVisibility(R.id.tv_complete, vis(isComplete))
-
-        views.setViewVisibility(R.id.btn_minus, vis(minusOn))
-        views.setViewVisibility(R.id.btn_plus, vis(plusOn))
-        views.setViewVisibility(R.id.btn_start_pause, vis(startPauseOn))
-        views.setViewVisibility(R.id.btn_stop_reset, vis(stopOn))
-
-        // 세로 구분선: showDividers + 옆 버튼이 보일 때만.
-        val dividersOn = timerSkin?.showDividers == true
-        views.setViewVisibility(R.id.div_minus, vis(dividersOn && minusOn))
-        views.setViewVisibility(R.id.div_plus, vis(dividersOn && plusOn))
-        views.setViewVisibility(R.id.div_stop, vis(dividersOn && stopOn))
-
-        applyDividerGraphics(context, views, skin)
+        views.setViewVisibility(R.id.btn_minus, vis(minusPlusOn))
+        views.setViewVisibility(R.id.btn_plus, vis(minusPlusOn))
+        views.setViewVisibility(R.id.btn_start_pause, vis(startStopOn))
+        views.setViewVisibility(R.id.btn_stop_reset, vis(startStopOn))
     }
 
     private fun vis(on: Boolean) = if (on) View.VISIBLE else View.GONE
@@ -193,43 +173,12 @@ object WidgetUpdater {
         }
     }
 
-    // ---- 세로 구분선 그래픽 ----
-
-    private fun applyDividerGraphics(context: Context, views: RemoteViews, skin: Skin?) {
-        val timerSkin = skin?.timer
-        val divIds = listOf(R.id.div_minus, R.id.div_plus, R.id.div_stop)
-        val imgFile = timerSkin?.dividersImage
-        val bitmap = if (skin != null && imgFile != null) {
-            SkinRepository.loadFrameBitmap(context, skin.skinId, imgFile)
-        } else null
-
-        if (bitmap != null) {
-            // 이미지 모드: PNG를 그리고 배경은 투명.
-            val widthDp = timerSkin?.dividersWidthDp ?: 1f
-            divIds.forEach { id ->
-                views.setImageViewBitmap(id, bitmap)
-                views.setInt(id, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
-                views.setViewLayoutWidth(id, widthDp, android.util.TypedValue.COMPLEX_UNIT_DIP)
-            }
-        } else {
-            // 색 모드: 이미지 없음, 배경색으로 단색 선.
-            val color = timerSkin?.dividersColor
-                ?.let { runCatching { Color.parseColor(it) }.getOrNull() }
-                ?: Color.parseColor("#2B2B2B")
-            divIds.forEach { id ->
-                views.setImageViewResource(id, android.R.color.transparent)
-                views.setInt(id, "setBackgroundColor", color)
-                views.setViewLayoutWidth(id, 1f, android.util.TypedValue.COMPLEX_UNIT_DIP)
-            }
-        }
-    }
-
-    // ---- 박스 배경 / 가로 구분선 ----
+    // ---- 박스 배경 (선·박스는 스킨 timer_theme PNG에 포함) ----
 
     private fun applyTimerChrome(context: Context, views: RemoteViews, skin: Skin?) {
         val timerSkin = skin?.timer
         val transparent = android.R.color.transparent
-        // 스킨이 그린 박스 배경 PNG가 있으면 그것을 깔고 내장 박스는 끈다.
+        // 스킨이 그린 배경 PNG(박스·구분선 포함)가 있으면 그것을 깔고 내장 박스는 끈다.
         val bgFile = timerSkin?.background
         val bgBitmap = if (skin != null && bgFile != null) {
             SkinRepository.loadFrameBitmap(context, skin.skinId, bgFile)
@@ -238,39 +187,27 @@ object WidgetUpdater {
             views.setImageViewBitmap(R.id.iv_timer_bg, bgBitmap)
             views.setInt(R.id.timer_box, "setBackgroundResource", transparent)
         } else {
+            // 무배경 폴백(주로 개발/내장 테스트 스킨): 내장 박스 모양만.
             views.setImageViewResource(R.id.iv_timer_bg, transparent)
             val boxBg = if (timerSkin?.showBox == true) R.drawable.timer_box_bg else transparent
             views.setInt(R.id.timer_box, "setBackgroundResource", boxBg)
-        }
-        val showH = timerSkin?.showDividerH == true
-        views.setViewVisibility(R.id.div_h, vis(showH))
-        if (showH) {
-            val hImgFile = timerSkin?.dividerHImage
-            val hBitmap = if (skin != null && hImgFile != null) {
-                SkinRepository.loadFrameBitmap(context, skin.skinId, hImgFile)
-            } else null
-            if (hBitmap != null) {
-                views.setImageViewBitmap(R.id.div_h, hBitmap)
-                views.setInt(R.id.div_h, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
-                val heightDp = timerSkin?.dividerHHeightDp ?: 1f
-                views.setViewLayoutHeight(R.id.div_h, heightDp, android.util.TypedValue.COMPLEX_UNIT_DIP)
-            } else {
-                views.setImageViewResource(R.id.div_h, transparent)
-                views.setInt(R.id.div_h, "setBackgroundColor", Color.parseColor("#2B2B2B"))
-                views.setViewLayoutHeight(R.id.div_h, 1f, android.util.TypedValue.COMPLEX_UNIT_DIP)
-            }
         }
     }
 
     // ---- 버튼 액션 (PendingIntent) ----
 
-    private fun applyButtonActions(context: Context, views: RemoteViews) {
+    private fun applyButtonActions(context: Context, views: RemoteViews, state: TimerState) {
         views.setOnClickPendingIntent(R.id.btn_minus, broadcast(context, TimerActionReceiver.ACTION_MINUS))
         views.setOnClickPendingIntent(R.id.btn_plus, broadcast(context, TimerActionReceiver.ACTION_PLUS))
         views.setOnClickPendingIntent(R.id.btn_start_pause, broadcast(context, TimerActionReceiver.ACTION_START_PAUSE))
         views.setOnClickPendingIntent(R.id.btn_stop_reset, broadcast(context, TimerActionReceiver.ACTION_STOP_RESET))
-        // 완료 상태의 "완료" 텍스트 탭 → 정지(IDLE) 복귀 (캐릭터 탭과 동일 동작)
-        views.setOnClickPendingIntent(R.id.tv_complete, broadcast(context, TimerActionReceiver.ACTION_TAP_COMPLETE))
+        // 시간 영역 탭: 완료면 이전 설정시간으로 초기화(IDLE 복귀), 그 외엔 시작/일시정지/재개 토글.
+        val timeAction = if (state == TimerState.COMPLETE) {
+            TimerActionReceiver.ACTION_TAP_COMPLETE
+        } else {
+            TimerActionReceiver.ACTION_START_PAUSE
+        }
+        views.setOnClickPendingIntent(R.id.tv_timer_value, broadcast(context, timeAction))
     }
 
     private fun broadcast(context: Context, action: String): PendingIntent {

@@ -32,26 +32,13 @@ data class Skin(
  */
 data class TimerSkin(
     /**
-     * 스킨이 그린 박스 배경 PNG 파일명(스킨 폴더 기준). null이면 내장 박스(showBox)로 폴백.
-     * 지정되면 박스 영역 뒤에 fitXY로 깔리고, 내장 박스 모양은 끈다.
+     * 스킨이 그린 타이머 배경 PNG 파일명(스킨 폴더 기준). 박스·세로선(시간↔버튼)·버튼사이 가로선이
+     * 모두 이 한 장에 그려진다(가로 레이아웃은 모든 상태에서 선 구성이 동일). 출시 테마는 무조건 포함한다.
+     * null이면 내장 박스(showBox)로 폴백(주로 개발/내장 테스트 스킨).
      */
     val background: String?,
-    /** 박스 배경(테두리 포함)을 그릴지. false면 투명. (background가 있으면 무시) */
+    /** background가 없을 때만 쓰는 내장 박스 폴백. false면 투명. */
     val showBox: Boolean,
-    /** 숫자/버튼 사이 가로선을 그릴지. 배경 이미지에 넣을 경우 false. */
-    val showDividerH: Boolean,
-    /** 가로 구분선 이미지 파일명(스킨 폴더 기준). 지정 시 색 대신 PNG를 그린다. */
-    val dividerHImage: String?,
-    /** 가로 구분선 높이(dp). dividerHImage 사용 시 필수 조정. null이면 기본값 1dp. */
-    val dividerHHeightDp: Float?,
-    /** 버튼 사이 세로선을 그릴지. 버튼 수가 상태마다 달라 배경 이미지로 대체 불가. */
-    val showDividers: Boolean,
-    /** 구분선 색. "#RRGGBB" 또는 "#AARRGGBB". null이면 기본값(#2B2B2B) 유지. dividersImage가 있으면 무시. */
-    val dividersColor: String?,
-    /** 세로 구분선 이미지 파일명(스킨 폴더 기준). 지정 시 색 대신 PNG를 그린다. */
-    val dividersImage: String?,
-    /** 세로 구분선 폭(dp). dividersImage 사용 시 의미있는 값으로 지정. null이면 기본값 1dp. */
-    val dividersWidthDp: Float?,
     /** 버튼 그림 방식. */
     val buttonStyle: ButtonStyle,
     /**

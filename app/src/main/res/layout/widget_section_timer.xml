@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  타이머 영역: "기능=영역, 버튼=그림" 구조 (사용자 결정).
-   - 박스 배경(timer_box)/가로 구분선(div_h)/세로 구분선(div_*)/버튼 그림은 스킨이 그린다.
-   - 버튼은 ImageView(클릭 영역)이며, 디폴트는 ic_btn_* 벡터, 노스킨은 그림만 투명(영역은 유지).
-  버튼 자식 순서 = [minus][start_pause][plus][stop]. top/bottom 공통 include 라 id 통일 (설계 문서 2-1).
+  타이머 영역(가로 배치): 왼쪽 시간(~80%) + 오른쪽 버튼 2개 세로 컬럼(~20%).
+   - 박스/세로선(시간↔버튼)/버튼사이 가로선은 모두 스킨의 timer_theme 배경(iv_timer_bg)에 그려진다.
+     코드가 그리던 div_* 구분선은 제거됨 (모든 상태에서 선 구성이 동일해졌기 때문).
+   - 버튼은 ImageView(클릭 영역)이며, 그림은 스킨 PNG(5종) 또는 내장 벡터, 노스킨은 투명(영역 유지).
+   - 버튼 컬럼 자식(위→아래): [plus][minus][start_pause][stop]. 상태별로 2개만 VISIBLE(나머지 GONE 접힘).
+       IDLE/COMPLETE → plus, minus / RUNNING·PAUSED → start_pause, stop.
+   - 시간(tv_timer_value) 탭 = 시작/일시정지/재개(또는 완료 시 초기화). top/bottom 공통 include라 id 통일.
 -->
+<!-- 바깥 여백(가로 6dp/세로 비율)은 include 쪽(widget_timer_top/bottom)에서 지정한다. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginHorizontal="6dp"
-    android:layout_marginVertical="2dp">
+    android:layout_height="match_parent">
 
-    <!-- 박스 배경 레이어: 스킨이 그린 디자인 PNG가 들어가는 자리(없으면 투명).
-         내장 박스 모양(showBox)은 아래 timer_box의 background로 그린다. -->
+    <!-- 박스/선이 구워진 스킨 배경 PNG가 들어가는 자리(없으면 투명). 내장 박스(showBox)는 timer_box의 background. -->
     <ImageView
         android:id="@+id/iv_timer_bg"
         android:layout_width="match_parent"
@@ -23,106 +24,61 @@
     <LinearLayout
         android:id="@+id/timer_box"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:background="@drawable/timer_box_bg"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:padding="0dp">
 
-    <!-- 디지털 시간 표시 (좌우 여백은 박스가 아닌 숫자에만 줘서 가로 구분선이 박스 끝까지 닿게) -->
-    <TextView
-        android:id="@+id/tv_timer_value"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="monospace"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:paddingHorizontal="8dp"
-        android:paddingTop="5dp"
-        android:paddingBottom="5dp"
-        android:text="@string/default_timer_value"
-        android:textColor="@color/timer_digit"
-        android:textSize="30sp"
-        android:textStyle="bold" />
+        <!-- 시간 표시(좌측 ~80%). 세로 가운데 정렬. 영역 전체가 시작/일시정지 탭 타깃. -->
+        <TextView
+            android:id="@+id/tv_timer_value"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="4"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:paddingHorizontal="8dp"
+            android:text="@string/default_timer_value"
+            android:textColor="@color/timer_digit"
+            android:textSize="30sp"
+            android:textStyle="bold" />
 
-    <!-- 숫자/버튼 구분 가로선: 좌우 마진 없이 박스 양끝에 붙는다. 색/이미지는 코드에서 설정. -->
-    <ImageView
-        android:id="@+id/div_h"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:contentDescription="@null"
-        android:scaleType="fitXY" />
+        <!-- 버튼 세로 컬럼(우측 ~20%). 항상 2개만 보이며 컬럼 높이를 균등 2분할. -->
+        <LinearLayout
+            android:id="@+id/btn_row"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-    <!-- 버튼 행 -->
-    <LinearLayout
-        android:id="@+id/btn_row"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal">
+            <ImageView
+                android:id="@+id/btn_plus"
+                style="@style/WidgetTimerButton"
+                android:contentDescription="@string/cd_plus"
+                android:src="@drawable/ic_btn_plus" />
 
-        <ImageView
-            android:id="@+id/btn_minus"
-            style="@style/WidgetTimerButton"
-            android:contentDescription="@string/cd_minus"
-            android:src="@drawable/ic_btn_minus" />
+            <ImageView
+                android:id="@+id/btn_minus"
+                style="@style/WidgetTimerButton"
+                android:contentDescription="@string/cd_minus"
+                android:src="@drawable/ic_btn_minus" />
 
-        <!-- minus와 함께 표시/숨김 -->
-        <ImageView
-            android:id="@+id/div_minus"
-            style="@style/WidgetButtonDivider"
-            android:contentDescription="@null"
-            android:scaleType="fitXY" />
+            <ImageView
+                android:id="@+id/btn_start_pause"
+                style="@style/WidgetTimerButton"
+                android:contentDescription="@string/cd_start"
+                android:src="@drawable/ic_btn_play"
+                android:visibility="gone" />
 
-        <ImageView
-            android:id="@+id/btn_start_pause"
-            style="@style/WidgetTimerButton"
-            android:contentDescription="@string/cd_start"
-            android:src="@drawable/ic_btn_play" />
+            <ImageView
+                android:id="@+id/btn_stop_reset"
+                style="@style/WidgetTimerButton"
+                android:contentDescription="@string/cd_stop"
+                android:src="@drawable/ic_btn_stop"
+                android:visibility="gone" />
 
-        <!-- plus와 함께 표시/숨김 -->
-        <ImageView
-            android:id="@+id/div_plus"
-            style="@style/WidgetButtonDivider"
-            android:contentDescription="@null"
-            android:scaleType="fitXY" />
-
-        <ImageView
-            android:id="@+id/btn_plus"
-            style="@style/WidgetTimerButton"
-            android:contentDescription="@string/cd_plus"
-            android:src="@drawable/ic_btn_plus" />
-
-        <!-- stop와 함께 표시/숨김 -->
-        <ImageView
-            android:id="@+id/div_stop"
-            style="@style/WidgetButtonDivider"
-            android:contentDescription="@null"
-            android:scaleType="fitXY"
-            android:visibility="gone" />
-
-        <ImageView
-            android:id="@+id/btn_stop_reset"
-            style="@style/WidgetTimerButton"
-            android:contentDescription="@string/cd_stop"
-            android:src="@drawable/ic_btn_stop"
-            android:visibility="gone" />
-
-    </LinearLayout>
-
-    <!-- 완료 상태 전용: 버튼 행 대신 "완료" 텍스트 하나로 통합. 탭하면 정지(IDLE) 복귀.
-         평소엔 GONE, 완료 시 btn_row를 GONE으로 두고 이 뷰를 VISIBLE로 (WidgetUpdater). -->
-    <TextView
-        android:id="@+id/tv_complete"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:paddingVertical="6dp"
-        android:text="@string/timer_complete_label"
-        android:textColor="@color/timer_digit"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:visibility="gone" />
+        </LinearLayout>
 
     </LinearLayout>
 

@@ -1,15 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  layoutMode = "bottom": [캐릭터 2x2] 위 / [타이머 2x1] 아래.
+  layoutMode = "bottom": [캐릭터] 위 / [타이머] 아래.
+  2x2 한 칸을 캐릭터 ~70%(weight 7) / 타이머 ~30%(weight 3)로 분할, 사이에 약간의 여백.
   widget_timer_top.xml과 동일한 섹션 include → 버튼/ImageView id 동일 (설계 문서 2-1).
+  (include로 weight를 적용하려면 layout_width/height를 둘 다 명시해야 한다.)
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <include layout="@layout/widget_section_character_above" />
+    <include
+        layout="@layout/widget_section_character_above"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="7"
+        android:layout_marginBottom="4dp" />
 
-    <include layout="@layout/widget_section_timer" />
+    <include
+        layout="@layout/widget_section_timer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="3"
+        android:layout_marginHorizontal="6dp" />
 
 </LinearLayout>

@@ -135,13 +135,6 @@ object SkinRepository {
     private fun parseTimerSkin(obj: JSONObject): TimerSkin = TimerSkin(
         background = obj.optString("background").ifBlank { null },
         showBox = obj.optBoolean("showBox", true),
-        showDividerH = obj.optBoolean("showDividerH", true),
-        dividerHImage = obj.optString("dividerHImage").ifBlank { null },
-        dividerHHeightDp = if (obj.has("dividerHHeightDp")) obj.optDouble("dividerHHeightDp").toFloat() else null,
-        showDividers = obj.optBoolean("showDividers", true),
-        dividersColor = obj.optString("dividersColor").ifBlank { null },
-        dividersImage = obj.optString("dividersImage").ifBlank { null },
-        dividersWidthDp = if (obj.has("dividersWidthDp")) obj.optDouble("dividersWidthDp").toFloat() else null,
         buttonStyle = ButtonStyle.fromKey(obj.optString("buttonStyle", "default")),
         buttons = obj.optJSONObject("buttons")?.let { b ->
             TimerButtons(

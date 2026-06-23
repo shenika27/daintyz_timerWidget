@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   AppWidgetProviderInfo
-  TODO(1차 구현): 2x3 셀 고정 크기에 맞춰 minWidth/minHeight, resizeMode 등 확정
-  - initialLayout은 layoutMode(top/bottom) 기본값인 widget_timer_top 사용
-  - resizeMode="none" (1차 버전은 리사이즈 미지원, 설계 문서 7장 제외 항목)
+  2x2 셀 고정 크기. (셀 dp 환산: 70*n - 30 → 2셀 = 110dp)
+  - 한 칸 안에서 타이머 ~30% / 캐릭터 ~70% (래퍼 레이아웃의 layout_weight로 분할).
+  - initialLayout은 layoutMode(top/bottom) 기본값인 widget_timer_top 사용.
+  - resizeMode="none" (리사이즈 미지원, 설계 문서 7장 제외 항목).
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:initialLayout="@layout/widget_timer_top"
     android:minWidth="110dp"
-    android:minHeight="180dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
     android:resizeMode="none"
     android:updatePeriodMillis="0"
     android:widgetCategory="home_screen"
