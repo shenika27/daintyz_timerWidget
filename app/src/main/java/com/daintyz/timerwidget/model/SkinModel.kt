@@ -59,10 +59,17 @@ data class TimerSkin(
  * 커스텀 .ttf는 1차 미지원(추후 비트맵 렌더링으로 확장).
  */
 data class TimerFont(
+    /** 내장 패밀리명(monospace 등). [file]이 있으면 무시된다. */
     val family: String?,
     /** "#RRGGBB" 또는 "#AARRGGBB". */
     val color: String?,
-    val sizeSp: Float?
+    val sizeSp: Float?,
+    /**
+     * 커스텀 폰트 파일명(.ttf, 스킨 폴더 기준). 지정 시 숫자를 이 Typeface로 비트맵 렌더링한다
+     * (RemoteViews는 setFontFamily가 비-remotable이라 TextView에 .ttf를 직접 못 먹임).
+     * null이면 [family] 기반 TextView 경로. 비트맵 모드에선 [sizeSp]는 fitCenter로 영역에 맞춰져 무시된다.
+     */
+    val file: String?
 )
 
 /**

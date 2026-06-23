@@ -29,20 +29,39 @@
         android:orientation="horizontal"
         android:padding="0dp">
 
-        <!-- 시간 표시(좌측 ~80%). 세로 가운데 정렬. 영역 전체가 시작/일시정지 탭 타깃. -->
-        <TextView
-            android:id="@+id/tv_timer_value"
+        <!-- 시간 표시(좌측 ~80%). 영역(time_area) 전체가 시작/일시정지 탭 타깃.
+             내장 폰트 = tv_timer_value(TextView), 커스텀 폰트(.ttf) = iv_timer_value(비트맵). 코드가 둘 중 하나만 표시. -->
+        <FrameLayout
+            android:id="@+id/time_area"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="4"
-            android:fontFamily="monospace"
-            android:gravity="center"
-            android:includeFontPadding="false"
-            android:paddingHorizontal="8dp"
-            android:text="@string/default_timer_value"
-            android:textColor="@color/timer_digit"
-            android:textSize="30sp"
-            android:textStyle="bold" />
+            android:layout_weight="4">
+
+            <TextView
+                android:id="@+id/tv_timer_value"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fontFamily="monospace"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingHorizontal="8dp"
+                android:text="@string/default_timer_value"
+                android:textColor="@color/timer_digit"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+
+            <!-- 커스텀 폰트 숫자 비트맵 자리. fitCenter로 영역에 맞춰 축소. 평소 GONE. -->
+            <ImageView
+                android:id="@+id/iv_timer_value"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:scaleType="fitCenter"
+                android:visibility="gone" />
+
+        </FrameLayout>
 
         <!-- 버튼 세로 컬럼(우측 ~20%). 항상 2개만 보이며 컬럼 높이를 균등 2분할. -->
         <LinearLayout

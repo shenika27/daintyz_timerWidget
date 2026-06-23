@@ -3,6 +3,7 @@ package com.daintyz.timerwidget.skin
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Typeface
 import android.util.Log
 import com.daintyz.timerwidget.model.ButtonStyle
 import com.daintyz.timerwidget.model.CharacterStates
@@ -31,6 +32,7 @@ object SkinRepository {
     private var cachedSkins: List<Skin>? = null
 
     private val bitmapCache = java.util.concurrent.ConcurrentHashMap<String, Bitmap>()
+    private val typefaceCache = java.util.concurrent.ConcurrentHashMap<String, Typeface>()
 
     fun loadAllSkins(context: Context): List<Skin> {
         cachedSkins?.let { return it }
@@ -71,9 +73,30 @@ object SkinRepository {
         return bitmap
     }
 
+    /**
+     * 커스텀 폰트(.ttf)를 Typeface로 로드. filesDir(다운로드) → assets(내장) 순. 없거나 실패하면 null.
+     * 위젯 숫자를 비트맵 렌더링할 때 사용한다.
+     */
+    fun loadTypeface(context: Context, skinId: String, fileName: String): Typeface? {
+        val key = "$skinId/$fileName"
+        typefaceCache[key]?.let { return it }
+
+        val downloadedFile = File(SkinDownloader.skinsDir(context), "$skinId/$fileName")
+        val typeface = if (downloadedFile.exists()) {
+            runCatching { Typeface.createFromFile(downloadedFile) }
+                .onFailure { Log.e(TAG, "파일 폰트 로드 실패: $key", it) }.getOrNull()
+        } else {
+            runCatching { Typeface.createFromAsset(context.assets, "$SKINS_DIR/$skinId/$fileName") }
+                .onFailure { Log.e(TAG, "에셋 폰트 로드 실패: $key", it) }.getOrNull()
+        }
+        if (typeface != null) typefaceCache[key] = typeface
+        return typeface
+    }
+
     fun clearCache() {
         cachedSkins = null
         bitmapCache.clear()
+        typefaceCache.clear()
     }
 
     // ---- 소스별 로드 ----
@@ -149,7 +172,8 @@ object SkinRepository {
             TimerFont(
                 family = f.optString("family").ifBlank { null },
                 color = f.optString("color").ifBlank { null },
-                sizeSp = if (f.has("sizeSp")) f.optDouble("sizeSp").toFloat() else null
+                sizeSp = if (f.has("sizeSp")) f.optDouble("sizeSp").toFloat() else null,
+                file = f.optString("file").ifBlank { null }
             )
         }
     )

@@ -5,7 +5,12 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.Typeface
 import android.os.SystemClock
 import android.util.TypedValue
 import android.view.View
@@ -16,7 +21,6 @@ import com.daintyz.timerwidget.model.ButtonStyle
 import com.daintyz.timerwidget.model.LayoutMode
 import com.daintyz.timerwidget.model.Skin
 import com.daintyz.timerwidget.model.TimerData
-import com.daintyz.timerwidget.model.TimerSkin
 import com.daintyz.timerwidget.model.TimerState
 import com.daintyz.timerwidget.receiver.TimerActionReceiver
 import com.daintyz.timerwidget.skin.FrameAnimationController
@@ -67,7 +71,7 @@ object WidgetUpdater {
         val characterSkin = SkinRepository.findSkin(context, data.selectedCharacterSkinId) ?: fallback
         val timerSkin = SkinRepository.findSkin(context, data.selectedTimerSkinId) ?: fallback
 
-        applyTimerText(views, data, nowElapsed, timerSkin?.timer)
+        applyTimerText(context, views, data, nowElapsed, timerSkin)
         applyButtonVisibility(views, data.state)
         applyButtonGraphics(context, views, data.state, timerSkin)
         applyTimerChrome(context, views, timerSkin)
@@ -82,20 +86,51 @@ object WidgetUpdater {
 
     // ---- 시간 텍스트 ----
 
-    private fun applyTimerText(views: RemoteViews, data: TimerData, nowElapsed: Long, timerSkin: TimerSkin?) {
+    private fun applyTimerText(context: Context, views: RemoteViews, data: TimerData, nowElapsed: Long, skin: Skin?) {
         // 완료 상태에선 남은 시간이 0 → "00:00"으로 표시된다. (완료 화면은 IDLE과 동일, 시간 탭만 초기화 동작)
         val text = formatMillis(data.remainingMillis(nowElapsed))
-        views.setTextViewText(R.id.tv_timer_value, text)
+        val font = skin?.timer?.font
+        val colorInt = font?.color?.let { runCatching { Color.parseColor(it) }.getOrNull() }
 
-        // 스킨이 숫자 폰트를 지정하면 덮어쓴다. 미지정 항목은 레이아웃 기본값 유지
-        // (RemoteViews는 매번 레이아웃에서 새로 만들어지므로 노스킨이면 자동으로 기본값으로 복원됨).
-        // color/size는 RemoteViews 지원(@RemotableViewMethod). family는 setFontFamily가 비-remotable이라
-        // 직접 적용 불가 → 커스텀 글꼴은 추후 비트맵 렌더링으로 확장 (font.family는 스키마 자리만 보존).
-        val font = timerSkin?.font ?: return
-        font.color
-            ?.let { runCatching { Color.parseColor(it) }.getOrNull() }
-            ?.let { views.setTextColor(R.id.tv_timer_value, it) }
-        font.sizeSp?.let { views.setTextViewTextSize(R.id.tv_timer_value, TypedValue.COMPLEX_UNIT_SP, it) }
+        // 커스텀 폰트(.ttf): RemoteViews는 setFontFamily가 비-remotable이라 TextView에 직접 못 먹인다.
+        // → Typeface로 숫자를 비트맵 렌더링해 ImageView에 표시(매 틱 재생성, Typeface는 캐시).
+        val typeface = if (skin != null && font?.file != null) {
+            SkinRepository.loadTypeface(context, skin.skinId, font.file)
+        } else null
+
+        if (typeface != null) {
+            val color = colorInt ?: context.getColor(R.color.timer_digit)
+            views.setImageViewBitmap(R.id.iv_timer_value, renderTimeBitmap(text, typeface, color))
+            views.setViewVisibility(R.id.iv_timer_value, View.VISIBLE)
+            views.setViewVisibility(R.id.tv_timer_value, View.GONE)
+            return
+        }
+
+        // 내장 폰트: TextView 경로. color/size는 RemoteViews 지원(@RemotableViewMethod).
+        // family(setFontFamily)는 비-remotable이라 미적용 — 내장 패밀리는 레이아웃 기본(monospace) 유지.
+        views.setViewVisibility(R.id.iv_timer_value, View.GONE)
+        views.setViewVisibility(R.id.tv_timer_value, View.VISIBLE)
+        views.setTextViewText(R.id.tv_timer_value, text)
+        colorInt?.let { views.setTextColor(R.id.tv_timer_value, it) }
+        font?.sizeSp?.let { views.setTextViewTextSize(R.id.tv_timer_value, TypedValue.COMPLEX_UNIT_SP, it) }
+    }
+
+    /** 시간 문자열을 커스텀 Typeface로 그린 비트맵. fitCenter ImageView가 시간 영역에 맞춰 축소한다. */
+    private fun renderTimeBitmap(text: String, typeface: Typeface, colorInt: Int): Bitmap {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.typeface = typeface
+            textSize = 120f // 고해상 렌더 후 fitCenter로 축소 → 선명도 확보
+            color = colorInt
+            textAlign = Paint.Align.LEFT
+        }
+        val bounds = Rect()
+        paint.getTextBounds(text, 0, text.length, bounds)
+        val pad = 8
+        val w = (bounds.width() + pad * 2).coerceAtLeast(1)
+        val h = (bounds.height() + pad * 2).coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        Canvas(bitmap).drawText(text, (pad - bounds.left).toFloat(), (pad - bounds.top).toFloat(), paint)
+        return bitmap
     }
 
     private fun formatMillis(millis: Long): String {
@@ -207,7 +242,7 @@ object WidgetUpdater {
         } else {
             TimerActionReceiver.ACTION_START_PAUSE
         }
-        views.setOnClickPendingIntent(R.id.tv_timer_value, broadcast(context, timeAction))
+        views.setOnClickPendingIntent(R.id.time_area, broadcast(context, timeAction))
     }
 
     private fun broadcast(context: Context, action: String): PendingIntent {
