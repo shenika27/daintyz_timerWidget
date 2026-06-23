@@ -16,7 +16,13 @@ data class Skin(
      * 노스킨(투명·탭만)은 timer 블록에 showBox:false, buttonStyle:"none" 등을 명시해 표현한다.
      * (파싱 단계에서 항상 채워지므로 실질적으로 non-null이지만, 안전을 위해 nullable 유지)
      */
-    val timer: TimerSkin?
+    val timer: TimerSkin?,
+    /**
+     * skin.json에 timer 블록이 명시돼 있었는지. (true=이 테마가 '타이머 디자인'을 제공)
+     * [timer]는 블록이 없어도 기본값으로 채워지므로(렌더 폴백용), "타이머 탭 목록에 노출할지"는 이 플래그로 판단한다.
+     * 캐릭터만 있고 타이머 디자인이 없는 테마는 false → 타이머 적용 탭에 나오지 않는다.
+     */
+    val hasCustomTimer: Boolean
 )
 
 /**

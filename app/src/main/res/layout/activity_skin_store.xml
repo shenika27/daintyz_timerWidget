@@ -1,14 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 상점: 전체 테마 목록. 카드 탭 → 상세/미리보기(SkinDetailActivity). -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- 상점: 전체 테마 목록. 기본은 미구매(미보유)만, 상단 체크박스로 전체보기. 카드 탭 → 상세(SkinDetailActivity). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:orientation="vertical">
 
-    <LinearLayout
-        android:id="@+id/store_list_container"
-        android:layout_width="match_parent"
+    <CheckBox
+        android:id="@+id/cb_show_all"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp" />
-</ScrollView>
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:text="@string/store_show_all" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:id="@+id/store_list_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp" />
+    </ScrollView>
+</LinearLayout>

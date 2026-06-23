@@ -37,10 +37,17 @@ class SkinStoreActivity : AppCompatActivity() {
 
     private var catalogEntries: List<RemoteSkinEntry> = emptyList()
 
+    /** 체크 시 구매(보유)한 항목도 표시. 기본은 미구매만. */
+    private var showAll = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_skin_store)
         title = getString(R.string.store_title)
+        findViewById<android.widget.CheckBox>(R.id.cb_show_all).setOnCheckedChangeListener { _, checked ->
+            showAll = checked
+            renderList()
+        }
         renderList()
         fetchCatalog()
     }
@@ -74,13 +81,15 @@ class SkinStoreActivity : AppCompatActivity() {
         val localIds = localSkins.map { it.skinId }.toSet()
         val inflater = LayoutInflater.from(this)
 
-        // 로컬(보유/내장) 테마
+        // 로컬(보유/내장) 테마 — 기본은 미구매만 보이므로, 보유(사용 가능) 항목은 전체보기일 때만.
         for (skin in localSkins) {
+            val owned = SkinAvailabilityChecker.isSkinAvailable(skin, data.purchasedSkinIds)
+            if (owned && !showAll) continue
             val card = inflater.inflate(R.layout.item_skin, container, false)
             bindLocalCard(card, skin, data.purchasedSkinIds)
             container.addView(card)
         }
-        // 카탈로그에만 있는(미다운로드) 테마
+        // 카탈로그에만 있는(미다운로드) 테마 — 미구매라 항상 표시.
         for (entry in catalogEntries) {
             if (entry.skinId in localIds) continue
             val card = inflater.inflate(R.layout.item_skin, container, false)

@@ -51,8 +51,10 @@ class SkinSelectActivity : AppCompatActivity() {
 
         val data = TimerPreferences.get(this).load()
         // 적용 대상은 '사용 가능한' 로컬 스킨(내장 + 다운로드 완료)만. 잠긴 테마는 상점에서 구매.
+        // 타이머 탭은 '타이머 디자인을 제공하는' 테마만(hasCustomTimer) — 캐릭터만 있는 테마는 제외.
         val skins = SkinRepository.loadAllSkins(this)
             .filter { SkinAvailabilityChecker.isSkinAvailable(it, data.purchasedSkinIds) }
+            .filter { tab == Tab.CHARACTER || it.hasCustomTimer }
 
         if (skins.isEmpty()) {
             val empty = TextView(this).apply {
