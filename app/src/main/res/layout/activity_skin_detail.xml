@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  테마 상세/미리보기: 상단 [정지][진행중] 토글로 preview/prev01·prev02 전환.
+  테마 상세: preview/{id}/prevNN.png를 가로 스와이프 갤러리로 보여준다(가변 개수, prev01부터 탐침).
   하단에 이름/세트 안내/가격 + 구매·다운로드·적용 액션.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
@@ -14,40 +14,32 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- 상태 토글 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btn_state_stop"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/preview_state_stop" />
-
-            <Button
-                android:id="@+id/btn_state_running"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="@string/preview_state_running" />
-        </LinearLayout>
-
-        <!-- 미리보기 이미지 -->
-        <ImageView
-            android:id="@+id/iv_preview"
+        <!-- 미리보기 갤러리 (가로 스와이프) -->
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="280dp"
             android:layout_marginBottom="16dp"
-            android:adjustViewBounds="true"
             android:background="@drawable/widget_button_bg"
-            android:contentDescription="@string/store_detail_title"
-            android:scaleType="fitCenter"
-            android:src="@drawable/frame_placeholder" />
+            android:fillViewport="true"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/preview_gallery"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <TextView
+            android:id="@+id/tv_preview_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="center"
+            android:text="@string/skin_download_fail"
+            android:textColor="@color/placeholder_fg"
+            android:textSize="13sp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tv_detail_name"

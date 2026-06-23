@@ -1,5 +1,6 @@
 package com.daintyz.timerwidget.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.Button
@@ -85,13 +86,22 @@ class SkinSelectActivity : AppCompatActivity() {
                 if (bitmap != null) thumb.setImageBitmap(bitmap)
                 else thumb.setImageResource(R.drawable.frame_placeholder)
             }
-            // 타이머 탭: 디자인 레포의 타이머 썸네일(thumb_timer)을 원격 로드.
+            // 타이머 탭: 디자인 레포의 테마 썸네일(thumb)을 원격 로드.
             Tab.TIMER -> RemoteImageLoader.load(
-                thumb, SkinRepoUrls.timerThumb(skin.skinId), R.drawable.frame_placeholder
+                thumb, SkinRepoUrls.themeThumb(skin.skinId), R.drawable.frame_placeholder
             )
         }
 
         card.findViewById<TextView>(R.id.tv_skin_name).text = skin.name
+
+        // 항목(썸네일/이름) 클릭 → 적용 미리보기 화면. 현재 탭 영역 기준으로 열고, 나머지 영역은 현재 적용분 유지.
+        card.setOnClickListener {
+            val area = if (tab == Tab.CHARACTER) PreviewActivity.AREA_CHARACTER else PreviewActivity.AREA_TIMER
+            startActivity(Intent(this, PreviewActivity::class.java).apply {
+                putExtra(PreviewActivity.EXTRA_AREA, area)
+                putExtra(PreviewActivity.EXTRA_SKIN_ID, skin.skinId)
+            })
+        }
 
         val isSelected = skin.skinId == selectedId
         val badge = card.findViewById<TextView>(R.id.tv_skin_badge)

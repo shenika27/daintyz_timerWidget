@@ -12,13 +12,16 @@ data class RemoteSkinEntry(
     val name: String,
     val isFree: Boolean,
     val zipUrl: String,
-    /** 캐릭터 탭 썸네일 PNG URL (thumb_character/{id}.png). */
+    /** 테마 썸네일 PNG URL (preview/{id}/thumb.png) — 상점/타이머 탭 공용. */
     val thumbnailUrl: String,
-    /** 타이머 탭 썸네일(미리보기) PNG URL (thumb_timer/{id}.png). */
-    val timerThumbnailUrl: String,
     /** 상세화면 '정지' 미리보기 URL (preview/{id}/prev01.png). */
     val previewStopUrl: String,
     /** 상세화면 '진행중' 미리보기 URL (preview/{id}/prev02.png). */
     val previewRunningUrl: String,
+    /**
+     * 이 테마가 타이머 디자인을 제공하는지(캐릭터+타이머) 여부. 캐릭터만이면 false.
+     * 상점에서 태그로 식별. catalog.json에 없으면 true로 간주(기존 테마 호환). 로컬은 [com.daintyz.timerwidget.model.Skin.hasCustomTimer].
+     */
+    val hasTimer: Boolean = true,
     val version: Int = 1
 )

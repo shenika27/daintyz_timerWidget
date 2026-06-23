@@ -44,7 +44,16 @@ object WidgetUpdater {
         }
     }
 
-    fun buildRemoteViews(context: Context, data: TimerData, nowElapsed: Long): RemoteViews {
+    /**
+     * @param forPreview 미리보기(앱 내 [RemoteViews.apply] 렌더)용이면 true.
+     *   버튼/캐릭터 클릭 PendingIntent 바인딩을 건너뛴다 — 미리보기 탭이 실제 타이머 상태를 바꾸지 않도록.
+     */
+    fun buildRemoteViews(
+        context: Context,
+        data: TimerData,
+        nowElapsed: Long,
+        forPreview: Boolean = false
+    ): RemoteViews {
         val layoutRes = when (data.layoutMode) {
             LayoutMode.TOP -> R.layout.widget_timer_top
             LayoutMode.BOTTOM -> R.layout.widget_timer_bottom
@@ -62,9 +71,11 @@ object WidgetUpdater {
         applyButtonVisibility(context, views, data.state, timerSkin)
         applyButtonGraphics(context, views, data.state, timerSkin)
         applyTimerChrome(context, views, timerSkin)
-        applyButtonActions(context, views)
         applyCharacterFrame(context, views, characterSkin, data, nowElapsed)
-        applyCharacterClick(context, views, data.state)
+        if (!forPreview) {
+            applyButtonActions(context, views)
+            applyCharacterClick(context, views, data.state)
+        }
 
         return views
     }

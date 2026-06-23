@@ -69,4 +69,16 @@
     <string name="preview_state_running">진행중</string>
     <string name="store_buy_stub">구매 기능은 준비 중입니다</string>
     <string name="store_go_apply">스킨 설정에서 적용하기</string>
+
+    <!-- 테마 태그(상점 식별) -->
+    <string name="skin_tag_with_timer">캐릭터 + 타이머</string>
+    <string name="skin_tag_character_only">캐릭터</string>
+
+    <!-- 적용 미리보기 화면(상태 탭) -->
+    <string name="preview_title">미리보기</string>
+    <string name="preview_state_idle">정지</string>
+    <string name="preview_state_run">진행</string>
+    <string name="preview_state_paused">일시정지</string>
+    <string name="preview_state_complete">완료</string>
+    <string name="cd_preview_widget">위젯 미리보기</string>
 </resources>

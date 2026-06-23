@@ -22,18 +22,18 @@ object SkinDownloader {
      * catalog.json을 가져온다. 블로킹 호출 — 반드시 백그라운드 스레드에서 실행.
      *
      * 디자인레포 폴더 규칙(skinId 기준 자동 유추 — SkinRepoUrls):
-     *   {baseUrl}/character_zip/{skinId}.zip   ← 캐릭터+타이머 한 세트 zip
-     *   {baseUrl}/thumb_character/{skinId}.png ← 캐릭터 탭 썸네일
-     *   {baseUrl}/thumb_timer/{skinId}.png     ← 타이머 탭 썸네일
-     *   {baseUrl}/preview/{skinId}/prev01·02.png ← 상세 미리보기(정지/진행중)
+     *   {baseUrl}/character_zip/{skinId}.zip       ← 캐릭터+타이머 한 세트 zip
+     *   {baseUrl}/preview/{skinId}/thumb.png       ← 테마 썸네일(상점/타이머 탭 공용)
+     *   {baseUrl}/preview/{skinId}/prev01.png …    ← 미리보기 팝업(prev01,02,03… 가변)
      *
      * catalog.json 형식 (zipUrl/thumbnailUrl은 생략 가능, 생략 시 위 규칙으로 유추):
      * {
      *   "baseUrl": "https://cdn.jsdelivr.net/gh/shenika27/daintyz_timer_characterList@main",
      *   "skins": [
-     *     { "skinId": "cha01", "name": "팡", "isFree": true, "version": 1 }
+     *     { "skinId": "cha01", "name": "팡", "isFree": true, "hasTimer": true, "version": 1 }
      *   ]
      * }
+     * hasTimer: 이 테마가 타이머 디자인을 제공하는지(상점 태그용). 생략 시 true.
      *
      * baseUrl을 생략하면 catalog.json이 위치한 폴더를 baseUrl로 사용한다.
      */
@@ -56,13 +56,12 @@ object SkinDownloader {
                         isFree = obj.optBoolean("isFree", true),
                         zipUrl = obj.optString("zipUrl").ifBlank { "$baseUrl/character_zip/$skinId.zip" },
                         thumbnailUrl = obj.optString("thumbnailUrl")
-                            .ifBlank { SkinRepoUrls.characterThumb(skinId, baseUrl) },
-                        timerThumbnailUrl = obj.optString("timerThumbnailUrl")
-                            .ifBlank { SkinRepoUrls.timerThumb(skinId, baseUrl) },
+                            .ifBlank { SkinRepoUrls.themeThumb(skinId, baseUrl) },
                         previewStopUrl = obj.optString("previewStopUrl")
                             .ifBlank { SkinRepoUrls.previewStop(skinId, baseUrl) },
                         previewRunningUrl = obj.optString("previewRunningUrl")
                             .ifBlank { SkinRepoUrls.previewRunning(skinId, baseUrl) },
+                        hasTimer = obj.optBoolean("hasTimer", true),
                         version = obj.optInt("version", 1)
                     )
                 }

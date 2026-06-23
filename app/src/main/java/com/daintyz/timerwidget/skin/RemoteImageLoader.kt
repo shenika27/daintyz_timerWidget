@@ -45,6 +45,26 @@ object RemoteImageLoader {
         }
     }
 
+    /**
+     * 미리보기 갤러리용 순차 로더. [urls]를 앞에서부터 받아 성공할 때마다 [onImage]를 메인 스레드로 콜백하고,
+     * 첫 실패(결번/404)에서 멈춘다 — 디자인레포 규칙상 prevNN은 prev01부터 빈 번호 없이 연속이므로.
+     * [isCancelled]가 true를 반환하면(예: Activity 종료) 즉시 중단한다.
+     */
+    fun loadGallery(
+        urls: List<String>,
+        isCancelled: () -> Boolean,
+        onImage: (index: Int, bitmap: Bitmap) -> Unit
+    ) {
+        executor.execute {
+            for ((i, url) in urls.withIndex()) {
+                if (isCancelled()) return@execute
+                val bitmap = cache[url] ?: runCatching { fetch(url) }.getOrNull()?.also { cache[url] = it }
+                ?: return@execute // 첫 결번에서 중단
+                mainHandler.post { if (!isCancelled()) onImage(i, bitmap) }
+            }
+        }
+    }
+
     private fun fetch(url: String): Bitmap? {
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
