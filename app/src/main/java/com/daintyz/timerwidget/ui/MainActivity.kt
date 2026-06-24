@@ -89,23 +89,29 @@ class MainActivity : AppCompatActivity() {
         else -> 0
     }
 
-    /** VaultItem 상세/미리보기 화면(아직 Activity)으로 이동. */
+    /** VaultItem 상세/미리보기 화면으로 이동. 보유 → 애니 미리보기, 미보유 → prev 이미지 + 구매 화면. */
     private fun openDetail(item: VaultItem) {
-        val intent = Intent(this, SkinDetailActivity::class.java).apply {
-            putExtra(SkinDetailActivity.EXTRA_SKIN_ID, item.id)
-            putExtra(SkinDetailActivity.EXTRA_NAME, item.name)
-            putExtra(SkinDetailActivity.EXTRA_IS_FREE, item.isFree)
-            putExtra(SkinDetailActivity.EXTRA_PRICE, item.price)
-            putExtra(SkinDetailActivity.EXTRA_PRESTIGE, item.prestige)
-            putExtra(SkinDetailActivity.EXTRA_OWNED, item.owned)
-            if (item is VaultItem.Remote) {
-                putExtra(SkinDetailActivity.EXTRA_ZIP_URL, item.entry.zipUrl)
-                putExtra(SkinDetailActivity.EXTRA_PREVIEW_BASE, item.entry.baseUrl)
-            } else {
-                putExtra(SkinDetailActivity.EXTRA_PREVIEW_BASE, SkinRepoUrls.ASSET_BASE)
-            }
+        if (item.owned) {
+            startActivity(Intent(this, PreviewActivity::class.java).apply {
+                putExtra(PreviewActivity.EXTRA_SKIN_ID, item.id)
+                putExtra(PreviewActivity.EXTRA_AREA, PreviewActivity.AREA_CHARACTER)
+            })
+        } else {
+            startActivity(Intent(this, SkinDetailActivity::class.java).apply {
+                putExtra(SkinDetailActivity.EXTRA_SKIN_ID, item.id)
+                putExtra(SkinDetailActivity.EXTRA_NAME, item.name)
+                putExtra(SkinDetailActivity.EXTRA_IS_FREE, item.isFree)
+                putExtra(SkinDetailActivity.EXTRA_PRICE, item.price)
+                putExtra(SkinDetailActivity.EXTRA_PRESTIGE, item.prestige)
+                putExtra(SkinDetailActivity.EXTRA_OWNED, false)
+                if (item is VaultItem.Remote) {
+                    putExtra(SkinDetailActivity.EXTRA_ZIP_URL, item.entry.zipUrl)
+                    putExtra(SkinDetailActivity.EXTRA_PREVIEW_BASE, item.entry.baseUrl)
+                } else {
+                    putExtra(SkinDetailActivity.EXTRA_PREVIEW_BASE, SkinRepoUrls.ASSET_BASE)
+                }
+            })
         }
-        startActivity(intent)
     }
 
     private fun requestNotificationPermissionIfNeeded() {

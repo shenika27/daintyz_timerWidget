@@ -48,10 +48,25 @@ class PreviewActivity : AppCompatActivity() {
     private var characterView: ImageView? = null
     private var characterSkin: Skin? = null
 
+    /** RUNNING 상태에서 타이머 카운트다운을 표시할 TextView (커스텀 폰트 테마에선 null). */
+    private var timerView: android.widget.TextView? = null
+    /** RUNNING 상태의 타이머 종료 시각 (SystemClock.elapsedRealtime 기준). */
+    private var timerEndElapsed: Long = 0L
+
     private val frameTick = object : Runnable {
         override fun run() {
             renderCharacterFrame()
             handler.postDelayed(this, FRAME_TICK_MS)
+        }
+    }
+
+    private val timerTick = object : Runnable {
+        override fun run() {
+            val remaining = (timerEndElapsed - SystemClock.elapsedRealtime()).coerceAtLeast(0)
+            val m = (remaining / 60_000).toInt()
+            val s = ((remaining % 60_000) / 1_000).toInt()
+            timerView?.text = "%02d:%02d".format(m, s)
+            if (remaining > 0) handler.postDelayed(this, 1_000L)
         }
     }
 
@@ -74,16 +89,19 @@ class PreviewActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(frameTick)
+        handler.removeCallbacks(timerTick)
     }
 
     private fun selectState(next: TimerState) {
         state = next
+        handler.removeCallbacks(timerTick)
         // 토글 강조 (선택된 탭은 눌린 느낌으로 비활성).
         findViewById<Button>(R.id.btn_st_idle).isEnabled = next != TimerState.IDLE
         findViewById<Button>(R.id.btn_st_run).isEnabled = next != TimerState.RUNNING
         findViewById<Button>(R.id.btn_st_paused).isEnabled = next != TimerState.PAUSED
         findViewById<Button>(R.id.btn_st_complete).isEnabled = next != TimerState.COMPLETE
         renderWidget()
+        if (next == TimerState.RUNNING) handler.post(timerTick)
     }
 
     /** 현재 상태로 위젯을 새로 인플레이트해 컨테이너에 붙이고, 캐릭터 애니메이션 루프를 재시작. */
@@ -91,7 +109,10 @@ class PreviewActivity : AppCompatActivity() {
         val data = previewData(state)
         val container = findViewById<FrameLayout>(R.id.preview_container)
         val views = WidgetUpdater.buildRemoteViews(this, data, SystemClock.elapsedRealtime(), forPreview = true)
-        val rendered = views.apply(this, container)
+        // applicationContext로 인플레이트: AppCompatActivity의 LayoutInflater는 <ImageView>를
+        // AppCompatImageView로 치환하는데, 그 뷰는 setImageResource가 @RemotableViewMethod가 아니라
+        // RemoteViews.apply가 거부한다(crash). 앱 컨텍스트엔 AppCompat factory가 없어 순수 프레임워크 뷰로 인플레이트됨.
+        val rendered = views.apply(applicationContext, container)
 
         container.removeAllViews()
         rendered.layoutParams =
@@ -99,6 +120,7 @@ class PreviewActivity : AppCompatActivity() {
         container.addView(rendered)
 
         characterView = rendered.findViewById<ImageView>(R.id.iv_character)
+        timerView = rendered.findViewById(R.id.tv_timer_value)
         characterSkin = SkinRepository.findSkin(this, data.selectedCharacterSkinId)
             ?: SkinRepository.loadAllSkins(this).firstOrNull()
 
@@ -126,12 +148,15 @@ class PreviewActivity : AppCompatActivity() {
         val sampleMs = (base.lastSetMinutes.coerceAtLeast(1)) * 60_000L
         val withState = when (s) {
             TimerState.IDLE -> base.copy(state = TimerState.IDLE)
-            TimerState.RUNNING -> base.copy(
-                state = TimerState.RUNNING,
-                totalMillis = sampleMs,
-                targetEndElapsed = now + sampleMs,
-                remainingMillisAtPause = 0L
-            )
+            TimerState.RUNNING -> {
+                timerEndElapsed = now + sampleMs
+                base.copy(
+                    state = TimerState.RUNNING,
+                    totalMillis = sampleMs,
+                    targetEndElapsed = timerEndElapsed,
+                    remainingMillisAtPause = 0L
+                )
+            }
             TimerState.PAUSED -> base.copy(
                 state = TimerState.PAUSED,
                 totalMillis = sampleMs,
@@ -143,10 +168,11 @@ class PreviewActivity : AppCompatActivity() {
                 remainingMillisAtPause = 0L
             )
         }
-        return if (area == AREA_TIMER) {
-            withState.copy(selectedTimerSkinId = skinId)
-        } else {
-            withState.copy(selectedCharacterSkinId = skinId)
-        }
+        // 이 스킨의 캐릭터를 항상 적용하고, 타이머 스킨이 있으면 함께 적용한다.
+        val skin = SkinRepository.findSkin(this, skinId)
+        return withState.copy(
+            selectedCharacterSkinId = skinId,
+            selectedTimerSkinId = if (skin?.timer != null) skinId else withState.selectedTimerSkinId
+        )
     }
 }

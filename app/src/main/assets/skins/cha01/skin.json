@@ -1,0 +1,56 @@
+{
+  "skinId": "cha01",
+  "name": "런닝하는 홉빵",
+  "isFree": true,
+  "character": {
+    "stop": {
+      "frames": [
+        "stop_01.png"
+      ],
+      "frameDurationMs": 1000
+    },
+    "running": {
+      "default": {
+        "frames": [
+          "running_01.png",
+          "running_02.png",
+          "running_03.png"
+        ],
+        "frameDurationMs": 500
+      }
+    },
+    "complete": {
+      "frames": [
+        "complete_01.png",
+        "complete_02.png",
+        "complete_03.png",
+        "complete_04.png"
+      ],
+      "frameDurationMs": 800
+    },
+    "pause": {
+      "frames": [
+        "pause_01.png",
+        "pause_02.png",
+        "pause_03.png",
+        "pause_04.png"
+      ],
+      "frameDurationMs": 1000
+    }
+  },
+  "timer": {
+    "background": "timer_bg.png",
+    "buttonStyle": "skin",
+    "buttons": {
+      "minus": "btn_minus.png",
+      "plus": "btn_plus.png",
+      "play": "btn_play.png",
+      "pause": "btn_pause.png",
+      "stop": "btn_stop.png"
+    },
+    "font": {
+      "file": "font.ttf",
+      "color": "#232323"
+    }
+  }
+}
