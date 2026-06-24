@@ -19,8 +19,4 @@ object SkinRepoUrls {
     /** prev{NN}.png 미리보기 URL. index는 1부터(prev01, prev02, …). */
     fun preview(skinId: String, index: Int, base: String = ASSET_BASE) =
         "$base/preview/$skinId/prev%02d.png".format(index)
-
-    // 미리보기 팝업이 가변 개수로 바뀌기 전까지 상세화면이 쓰는 첫 두 장(prev01/prev02) 별칭.
-    fun previewStop(skinId: String, base: String = ASSET_BASE) = preview(skinId, 1, base)
-    fun previewRunning(skinId: String, base: String = ASSET_BASE) = preview(skinId, 2, base)
 }

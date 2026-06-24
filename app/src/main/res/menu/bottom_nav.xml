@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 하단 탭: 보유(창고) / 상점 / 설정 -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_vault"
+        android:icon="@drawable/ic_nav_vault"
+        android:title="@string/nav_vault" />
+    <item
+        android:id="@+id/nav_store"
+        android:icon="@drawable/ic_nav_store"
+        android:title="@string/nav_store" />
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_nav_settings"
+        android:title="@string/nav_settings" />
+</menu>

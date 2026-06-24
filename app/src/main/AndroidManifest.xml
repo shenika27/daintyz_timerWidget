@@ -26,15 +26,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 스킨 설정(적용) 화면 -->
-        <activity
-            android:name=".ui.SkinSelectActivity"
-            android:exported="false" />
-
-        <!-- 상점 목록 화면 -->
-        <activity
-            android:name=".ui.SkinStoreActivity"
-            android:exported="false" />
+        <!-- 보유(창고)/상점/설정은 MainActivity 셸의 하단 탭 프래그먼트로 통합됨 -->
 
         <!-- 테마 상세/미리보기 화면 -->
         <activity

@@ -32,21 +32,24 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <!-- 프리스티지(희귀) 표시 자리. 디자인은 추후 — 지금은 텍스트 배지 틀만. -->
+        <TextView
+            android:id="@+id/tv_skin_prestige"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/skin_tag_prestige"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/tv_skin_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/placeholder_fg"
             android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/tv_skin_tag"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textColor="@color/placeholder_fg"
-            android:textSize="12sp"
-            android:visibility="gone" />
     </LinearLayout>
 
     <Button

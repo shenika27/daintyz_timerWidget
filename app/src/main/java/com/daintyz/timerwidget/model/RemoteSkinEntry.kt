@@ -10,18 +10,15 @@ package com.daintyz.timerwidget.model
 data class RemoteSkinEntry(
     val skinId: String,
     val name: String,
+    /** 가격(원). 0이면 무료. [isFree]는 이 값에서 도출된다. */
+    val price: Int,
+    /** price <= 0 이면 무료. (구매/잠금 판정용 — 기존 호출부 호환을 위해 유지) */
     val isFree: Boolean,
+    /** 프리스티지(희귀) 스킨 여부. 평생이용권으로도 해금 안 됨(항상 개별구매). 상점에서 별도 표시. */
+    val prestige: Boolean = false,
     val zipUrl: String,
     /** 테마 썸네일 PNG URL (preview/{id}/thumb.png) — 상점/타이머 탭 공용. */
     val thumbnailUrl: String,
-    /** 상세화면 '정지' 미리보기 URL (preview/{id}/prev01.png). */
-    val previewStopUrl: String,
-    /** 상세화면 '진행중' 미리보기 URL (preview/{id}/prev02.png). */
-    val previewRunningUrl: String,
-    /**
-     * 이 테마가 타이머 디자인을 제공하는지(캐릭터+타이머) 여부. 캐릭터만이면 false.
-     * 상점에서 태그로 식별. catalog.json에 없으면 true로 간주(기존 테마 호환). 로컬은 [com.daintyz.timerwidget.model.Skin.hasCustomTimer].
-     */
-    val hasTimer: Boolean = true,
-    val version: Int = 1
+    /** 미리보기 에셋 베이스 URL(catalog baseUrl 또는 jsDelivr ASSET_BASE). 상세화면이 prevNN.png를 유추하는 기준. */
+    val baseUrl: String
 )

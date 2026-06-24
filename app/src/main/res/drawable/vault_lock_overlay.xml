@@ -1,0 +1,6 @@
+<!-- 미보유 카드 딤: 둥근 진한 회색 반투명 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#B3403A33" />
+    <corners android:radius="24dp" />
+</shape>

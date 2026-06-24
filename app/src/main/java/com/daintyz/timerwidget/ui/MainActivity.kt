@@ -1,110 +1,84 @@
 package com.daintyz.timerwidget.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
-import android.widget.Button
-import android.widget.EditText
-import android.widget.RadioGroup
-import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.daintyz.timerwidget.R
-import com.daintyz.timerwidget.controller.TimerController
-import com.daintyz.timerwidget.data.TimerPreferences
-import com.daintyz.timerwidget.model.LayoutMode
-import com.daintyz.timerwidget.model.TimerState
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 /**
- * 앱 메인 화면 (설계 문서 3-2, 2-1).
+ * 앱 셸 (설계 문서 3-2, 2-1).
  *
- * - 증감 단위 자유 설정 (숫자패드 직접 입력)
- * - 현재 타이머 상태/남은 시간을 위젯과 동기화하여 표시
- * - 타이머 위/아래 배치 전환 토글 (변경 시 위젯 즉시 갱신)
- * - 스킨 선택 화면 진입점
- * - 첫 실행 시 알림 권한(POST_NOTIFICATIONS) 요청 (Android 13+)
+ * 하단 탭 네비게이션(보유/상점/설정)으로 세 프래그먼트를 전환한다. 진입 첫 화면은 보유(창고) 캐러셀.
+ * 첫 실행 시 알림 권한(POST_NOTIFICATIONS)을 요청한다(Android 13+).
  */
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var tvState: TextView
-    private lateinit var tvRemaining: TextView
-    private lateinit var etStep: EditText
-    private lateinit var rgLayoutMode: RadioGroup
+    companion object {
+        /** 외부(상세 화면 등)에서 특정 탭으로 진입시킬 때 쓰는 인텐트 extra. 값은 메뉴 아이템 이름. */
+        const val EXTRA_NAV = "nav_tab"
+        const val NAV_VAULT = "vault"
+        const val NAV_STORE = "store"
+        const val NAV_SETTINGS = "settings"
+
+        /** 다른 화면에서 보유(창고) 탭으로 돌아오게 하는 인텐트. */
+        fun vaultIntent(context: Context): Intent =
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_NAV, NAV_VAULT)
+            }
+    }
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* 결과 무시: 거부해도 앱은 동작 */ }
+
+    private lateinit var bottomNav: BottomNavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        tvState = findViewById(R.id.tv_state)
-        tvRemaining = findViewById(R.id.tv_remaining)
-        etStep = findViewById(R.id.et_step)
-        rgLayoutMode = findViewById(R.id.rg_layout_mode)
+        bottomNav = findViewById(R.id.bottom_nav)
+        bottomNav.setOnItemSelectedListener { item ->
+            showFragment(item.itemId)
+            true
+        }
 
-        findViewById<Button>(R.id.btn_save_step).setOnClickListener { saveStep() }
-        findViewById<Button>(R.id.btn_open_skins).setOnClickListener {
-            startActivity(Intent(this, SkinSelectActivity::class.java))
-        }
-        findViewById<Button>(R.id.btn_open_store).setOnClickListener {
-            startActivity(Intent(this, SkinStoreActivity::class.java))
-        }
-        rgLayoutMode.setOnCheckedChangeListener { _, checkedId ->
-            val mode = if (checkedId == R.id.rb_bottom) LayoutMode.BOTTOM else LayoutMode.TOP
-            TimerController.setLayoutMode(this, mode)
+        if (savedInstanceState == null) {
+            bottomNav.selectedItemId = navItemFromIntent(intent)
         }
 
         requestNotificationPermissionIfNeeded()
     }
 
-    override fun onResume() {
-        super.onResume()
-        syncFromState()
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        bottomNav.selectedItemId = navItemFromIntent(intent)
     }
 
-    private fun syncFromState() {
-        val data = TimerPreferences.get(this).load()
-        tvState.text = stateLabel(data.state)
-        tvRemaining.text = formatMillis(data.remainingMillis(SystemClock.elapsedRealtime()))
+    private fun navItemFromIntent(intent: Intent): Int = when (intent.getStringExtra(EXTRA_NAV)) {
+        NAV_STORE -> R.id.nav_store
+        NAV_SETTINGS -> R.id.nav_settings
+        else -> R.id.nav_vault
+    }
 
-        if (etStep.text.isNullOrBlank()) {
-            etStep.setText(data.stepMinutes.toString())
+    private fun showFragment(itemId: Int) {
+        val fragment: Fragment = when (itemId) {
+            R.id.nav_store -> StoreFragment()
+            R.id.nav_settings -> SettingsFragment()
+            else -> VaultFragment()
         }
-        // 리스너 재진입 방지를 위해 일시적으로 해제 후 설정
-        rgLayoutMode.setOnCheckedChangeListener(null)
-        rgLayoutMode.check(if (data.layoutMode == LayoutMode.BOTTOM) R.id.rb_bottom else R.id.rb_top)
-        rgLayoutMode.setOnCheckedChangeListener { _, checkedId ->
-            val mode = if (checkedId == R.id.rb_bottom) LayoutMode.BOTTOM else LayoutMode.TOP
-            TimerController.setLayoutMode(this, mode)
-        }
-    }
-
-    private fun saveStep() {
-        val step = etStep.text.toString().toIntOrNull()
-        if (step == null || step < 1) {
-            Toast.makeText(this, "1 이상의 숫자를 입력하세요", Toast.LENGTH_SHORT).show()
-            return
-        }
-        TimerController.setStepMinutes(this, step)
-        Toast.makeText(this, "증감 단위 ${step}분으로 저장됨", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun stateLabel(state: TimerState): String = when (state) {
-        TimerState.IDLE -> "정지"
-        TimerState.RUNNING -> "진행 중"
-        TimerState.PAUSED -> "일시정지"
-        TimerState.COMPLETE -> "완료"
-    }
-
-    private fun formatMillis(millis: Long): String {
-        val totalSeconds = (millis + 999) / 1000
-        return "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.nav_host, fragment)
+            .commit()
     }
 
     private fun requestNotificationPermissionIfNeeded() {

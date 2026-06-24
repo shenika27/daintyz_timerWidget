@@ -42,6 +42,7 @@ enum class LayoutMode(val key: String) {
  * @param selectedCharacterSkinId 캐릭터 영역에 적용된 스킨(테마) id.
  * @param selectedTimerSkinId 타이머 영역에 적용된 스킨(테마) id. 캐릭터와 독립적으로 선택된다.
  * @param purchasedSkinIds 구매된 스킨(테마) id 집합. 구매는 테마 단위이므로 해금되면 캐릭터/타이머 둘 다 사용 가능.
+ * @param hasLifetimePass '업데이트 평생이용권' 보유 여부. true면 프리스티지가 아닌 모든 유료 테마가 해금된다(프리스티지는 항상 개별구매).
  */
 data class TimerData(
     val state: TimerState,
@@ -53,7 +54,8 @@ data class TimerData(
     val layoutMode: LayoutMode,
     val selectedCharacterSkinId: String,
     val selectedTimerSkinId: String,
-    val purchasedSkinIds: Set<String>
+    val purchasedSkinIds: Set<String>,
+    val hasLifetimePass: Boolean = false
 ) {
     /**
      * 지정한 기준 시각에서의 남은 시간(ms). 상태에 무관하게 일관된 값을 돌려준다.

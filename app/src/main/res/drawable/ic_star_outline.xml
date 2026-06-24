@@ -1,0 +1,14 @@
+<!-- 즐겨찾기 OFF: 도톰하고 끝이 둥근 손그림풍 별 — 연브라운 아웃라인만 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/placeholder_fg"
+        android:strokeWidth="2"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M12,2.5L14.65,8.36L21.03,9.06L16.28,13.39L17.59,19.69L12,16.5L6.42,19.69L7.72,13.39L2.97,9.06L9.35,8.36Z" />
+</vector>

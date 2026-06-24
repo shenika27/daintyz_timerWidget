@@ -31,6 +31,10 @@ class SkinDetailActivity : AppCompatActivity() {
         const val EXTRA_SKIN_ID = "skin_id"
         const val EXTRA_NAME = "name"
         const val EXTRA_IS_FREE = "is_free"
+        /** 가격(원). 0이면 무료. */
+        const val EXTRA_PRICE = "price"
+        /** 프리스티지(희귀) 스킨 여부. 평생이용권으로 해금 안 됨. */
+        const val EXTRA_PRESTIGE = "prestige"
         const val EXTRA_OWNED = "owned"
         const val EXTRA_ZIP_URL = "zip_url"
         /** 미리보기 에셋 베이스 URL(catalog baseUrl 또는 jsDelivr ASSET_BASE). prevNN/zip 유추에 사용. */
@@ -42,6 +46,8 @@ class SkinDetailActivity : AppCompatActivity() {
     private lateinit var skinId: String
     private lateinit var skinName: String
     private var isFree = true
+    private var price = 0
+    private var prestige = false
     private var zipUrl: String? = null
     private lateinit var previewBase: String
 
@@ -55,6 +61,8 @@ class SkinDetailActivity : AppCompatActivity() {
         skinId = intent.getStringExtra(EXTRA_SKIN_ID) ?: run { finish(); return }
         skinName = intent.getStringExtra(EXTRA_NAME) ?: skinId
         isFree = intent.getBooleanExtra(EXTRA_IS_FREE, true)
+        price = intent.getIntExtra(EXTRA_PRICE, 0)
+        prestige = intent.getBooleanExtra(EXTRA_PRESTIGE, false)
         zipUrl = intent.getStringExtra(EXTRA_ZIP_URL)
         previewBase = intent.getStringExtra(EXTRA_PREVIEW_BASE) ?: SkinRepoUrls.ASSET_BASE
 
@@ -94,8 +102,8 @@ class SkinDetailActivity : AppCompatActivity() {
     /** 보유 여부를 매번 재평가 (다운로드 후 갱신 반영). */
     private fun isOwned(): Boolean {
         val skin = SkinRepository.findSkin(this, skinId) ?: return false
-        val purchased = TimerPreferences.get(this).load().purchasedSkinIds
-        return SkinAvailabilityChecker.isSkinAvailable(skin, purchased)
+        val data = TimerPreferences.get(this).load()
+        return SkinAvailabilityChecker.isSkinAvailable(skin, data.purchasedSkinIds, data.hasLifetimePass)
     }
 
     private fun renderAction() {
@@ -105,8 +113,8 @@ class SkinDetailActivity : AppCompatActivity() {
 
         price.text = when {
             owned -> getString(R.string.skin_badge_owned)
-            isFree -> getString(R.string.skin_badge_free)
-            else -> getString(R.string.skin_badge_locked)
+            isFree || this.price <= 0 -> getString(R.string.skin_badge_free)
+            else -> getString(R.string.skin_price_won, "%,d".format(this.price))
         }
 
         when {
@@ -119,7 +127,7 @@ class SkinDetailActivity : AppCompatActivity() {
                 action.text = getString(R.string.store_go_apply)
                 action.isEnabled = true
                 action.setOnClickListener {
-                    startActivity(Intent(this, SkinSelectActivity::class.java))
+                    startActivity(MainActivity.vaultIntent(this))
                 }
             }
             isFree -> {
@@ -144,11 +152,12 @@ class SkinDetailActivity : AppCompatActivity() {
         val entry = RemoteSkinEntry(
             skinId = skinId,
             name = skinName,
+            price = price,
             isFree = isFree,
+            prestige = prestige,
             zipUrl = zipUrl ?: "$previewBase/character_zip/$skinId.zip",
             thumbnailUrl = SkinRepoUrls.themeThumb(skinId, previewBase),
-            previewStopUrl = SkinRepoUrls.preview(skinId, 1, previewBase),
-            previewRunningUrl = SkinRepoUrls.preview(skinId, 2, previewBase)
+            baseUrl = previewBase
         )
         SkinDownloader.download(
             context = this,

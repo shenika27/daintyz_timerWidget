@@ -55,7 +55,6 @@
     <string name="skin_btn_buy">구매</string>
     <string name="skin_btn_download">다운로드</string>
     <string name="skin_btn_downloading">다운로드 중…</string>
-    <string name="skin_badge_downloading">다운로드 중…</string>
     <string name="skin_download_complete">다운로드 완료</string>
     <string name="skin_download_fail">다운로드 실패. 다시 시도해주세요.</string>
     <string name="skin_apply_empty">사용 가능한 스킨이 없습니다. 상점에서 받아보세요.</string>
@@ -65,14 +64,12 @@
     <string name="store_show_all">전체보기 (구매한 항목도)</string>
     <string name="store_detail_title">테마 상세</string>
     <string name="store_set_label">캐릭터 + 타이머 세트</string>
-    <string name="preview_state_stop">정지</string>
-    <string name="preview_state_running">진행중</string>
     <string name="store_buy_stub">구매 기능은 준비 중입니다</string>
     <string name="store_go_apply">스킨 설정에서 적용하기</string>
-
-    <!-- 테마 태그(상점 식별) -->
-    <string name="skin_tag_with_timer">캐릭터 + 타이머</string>
-    <string name="skin_tag_character_only">캐릭터</string>
+    <!-- 가격 표시: %1$s = 천단위 콤마 적용된 금액 (예: 1,200원) -->
+    <string name="skin_price_won">%1$s원</string>
+    <!-- 프리스티지(희귀) 스킨 배지 — 디자인 추후, 텍스트 틀만 -->
+    <string name="skin_tag_prestige">✦ 프리스티지</string>
 
     <!-- 적용 미리보기 화면(상태 탭) -->
     <string name="preview_title">미리보기</string>
@@ -81,4 +78,33 @@
     <string name="preview_state_paused">일시정지</string>
     <string name="preview_state_complete">완료</string>
     <string name="cd_preview_widget">위젯 미리보기</string>
+
+    <!-- 하단 탭 네비게이션 -->
+    <string name="nav_vault">보유</string>
+    <string name="nav_store">상점</string>
+    <string name="nav_settings">설정</string>
+
+    <!-- 창고(보유 테마) 캐러셀 -->
+    <string name="vault_apply">적용</string>
+    <string name="vault_applied">적용됨</string>
+    <string name="vault_in_use">적용중</string>
+    <string name="vault_preview">미리보기</string>
+    <!-- 위치 표시: %1$d = 현재(1부터), %2$d = 전체 개수 -->
+    <string name="vault_position">%1$d / %2$d</string>
+    <string name="vault_empty">보유한 테마가 없어요. 상점에서 받아보세요.</string>
+    <string name="vault_applied_toast">%1$s 적용됨</string>
+    <string name="cd_vault_card">테마 미리보기</string>
+
+    <!-- 창고 필터/즐겨찾기 -->
+    <string name="vault_page_title">테마</string>
+    <string name="vault_filter_all">전체</string>
+    <string name="vault_filter_owned">보유</string>
+    <string name="vault_filter_locked">미보유</string>
+    <string name="vault_favorites">즐겨찾기</string>
+    <string name="vault_owned_only">구매한 항목만</string>
+    <string name="vault_buy">구매하기</string>
+    <string name="vault_fav_empty">아직 즐겨찾기한 테마가 없어요.</string>
+    <string name="vault_locked_empty">조건에 맞는 테마가 없어요.</string>
+    <string name="cd_favorite">즐겨찾기</string>
+    <string name="cd_locked">잠김</string>
 </resources>

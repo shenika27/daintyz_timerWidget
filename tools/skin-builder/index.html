@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>캐릭터 타이머 스킨 빌더</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --line: #e3e6ea; --ink: #1d2329;
+    --sub: #6b7480; --accent: #5b7cfa; --accent-d: #4763d6; --danger: #e2574c;
+    --ok: #2faa6a; --chip: #eef1f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.5;
+  }
+  header {
+    background: var(--card); border-bottom: 1px solid var(--line);
+    padding: 18px 24px; position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { margin: 0; font-size: 18px; }
+  header p { margin: 4px 0 0; font-size: 13px; color: var(--sub); }
+  main { max-width: 880px; margin: 0 auto; padding: 24px 16px 120px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 18px;
+  }
+  .card > h2 { margin: 0 0 4px; font-size: 15px; }
+  .card > .hint { margin: 0 0 14px; font-size: 12.5px; color: var(--sub); }
+  .grid { display: grid; gap: 12px; }
+  .grid.two { grid-template-columns: 1fr 1fr; }
+  label.field { display: block; font-size: 13px; }
+  label.field > span { display: block; margin-bottom: 5px; color: var(--sub); font-weight: 600; }
+  input[type=text], input[type=number], select {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--line);
+    border-radius: 8px; font-size: 14px; background: #fff; color: var(--ink);
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+  .check input { width: 16px; height: 16px; }
+
+  .state-card { border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .state-card.req > h3::after { content: " *"; color: var(--danger); }
+  .state-card h3 { margin: 0 0 2px; font-size: 14px; }
+  .state-card .sub { font-size: 12px; color: var(--sub); margin: 0 0 10px; }
+  .drop {
+    border: 2px dashed var(--line); border-radius: 8px; padding: 16px;
+    text-align: center; font-size: 13px; color: var(--sub); cursor: pointer;
+    transition: .12s; background: #fafbfc;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); color: var(--accent); background: #f5f7ff; }
+  .frames { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .frame {
+    width: 84px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+    background: #fff; position: relative; font-size: 11px;
+  }
+  .frame img { width: 100%; height: 64px; object-fit: contain; display: block; background:
+    repeating-conic-gradient(#eee 0% 25%, #fafafa 0% 50%) 50% / 14px 14px; }
+  .frame .nm { padding: 3px 4px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .frame .ops { display: flex; border-top: 1px solid var(--line); }
+  .frame .ops button {
+    flex: 1; border: none; background: #fff; padding: 3px 0; cursor: pointer;
+    font-size: 12px; color: var(--sub); border-right: 1px solid var(--line);
+  }
+  .frame .ops button:last-child { border-right: none; }
+  .frame .ops button:hover { background: var(--chip); color: var(--ink); }
+  .frame .ops .del:hover { color: var(--danger); }
+  .dur { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--sub); }
+  .dur input { width: 90px; }
+  .loopchk { margin-top: 8px; display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--sub); cursor: pointer; }
+  .loopchk input { width: 15px; height: 15px; }
+
+  .single-asset { display: flex; align-items: center; gap: 12px; }
+  .single-asset .thumb {
+    width: 56px; height: 56px; border: 1px solid var(--line); border-radius: 8px;
+    object-fit: contain; background: #fafbfc; flex: none;
+  }
+  .single-asset .meta { font-size: 12px; color: var(--sub); flex: 1; min-width: 0; }
+  .single-asset .meta b { color: var(--ink); display: block; font-size: 13px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pick {
+    border: 1px solid var(--line); background: #fff; border-radius: 8px;
+    padding: 7px 12px; font-size: 13px; cursor: pointer; color: var(--ink);
+  }
+  .pick:hover { border-color: var(--accent); color: var(--accent); }
+  .clear-x { border:none; background:none; color: var(--danger); cursor:pointer; font-size: 18px; padding: 0 4px; }
+
+  details.opt { border: 1px solid var(--line); border-radius: 10px; padding: 0; margin-top: 6px; }
+  details.opt > summary { padding: 12px 14px; cursor: pointer; font-size: 13.5px; font-weight: 600; list-style: none; }
+  details.opt > summary::-webkit-details-marker { display: none; }
+  details.opt > summary::before { content: "▸ "; color: var(--sub); }
+  details.opt[open] > summary::before { content: "▾ "; }
+  details.opt > .body { padding: 0 14px 14px; }
+
+  footer {
+    position: fixed; bottom: 0; left: 0; right: 0; background: var(--card);
+    border-top: 1px solid var(--line); padding: 12px 16px;
+    display: flex; align-items: center; gap: 14px; justify-content: center;
+  }
+  footer .status { font-size: 13px; color: var(--sub); }
+  .btn-make {
+    background: var(--accent); color: #fff; border: none; border-radius: 9px;
+    padding: 12px 26px; font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .btn-make:hover { background: var(--accent-d); }
+  .btn-make:disabled { background: #b9c0cc; cursor: not-allowed; }
+  .errs { color: var(--danger); font-size: 12.5px; }
+  code { background: var(--chip); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .preview-json {
+    background: #1d2329; color: #d6e0ea; border-radius: 8px; padding: 12px;
+    font-size: 11.5px; white-space: pre; overflow: auto; max-height: 320px; margin: 0;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎨 캐릭터 타이머 스킨 빌더</h1>
+  <p>이미지를 상태별로 올리면 <code>skin.json</code> 구성 + 파일명 정리 + <code>{skinId}.zip</code> 패키징까지 자동으로 합니다. 코드 수정 없이 디자인레포에 올리면 상점에 노출돼요.</p>
+</header>
+
+<main>
+  <!-- 1. 기본 정보 -->
+  <section class="card">
+    <h2>1. 기본 정보</h2>
+    <p class="hint">skinId는 영문/숫자만. 디자인레포의 <code>character_zip/{skinId}.zip</code>, <code>catalog.json</code>의 skinId와 반드시 일치해야 합니다.</p>
+    <div class="grid two">
+      <label class="field"><span>skinId (예: cha07)</span>
+        <input type="text" id="skinId" placeholder="cha07" autocomplete="off"></label>
+      <label class="field"><span>테마 이름 (상점 표시명)</span>
+        <input type="text" id="name" placeholder="팡팡 토끼" autocomplete="off"></label>
+    </div>
+    <div class="grid two" style="margin-top:12px">
+      <label class="field"><span>가격 (원) — 0이면 무료</span>
+        <input type="number" id="price" min="0" step="100" value="0" autocomplete="off"></label>
+      <div style="display:flex;align-items:flex-end;padding-bottom:9px;font-size:13px;color:var(--sub)" id="priceHint">→ 무료 테마</div>
+    </div>
+    <div style="margin-top:12px">
+      <label class="check"><input type="checkbox" id="prestige"> ✦ 프리스티지(희귀) 스킨</label>
+      <p class="hint" style="margin:4px 0 0 24px">체크 시 '업데이트 평생이용권'으로도 해금되지 않고 항상 개별구매로만 풀립니다(상점에 별도 표시).</p>
+    </div>
+    <p class="hint" style="margin-top:8px;margin-bottom:0">가격은 <code>skin.json</code>이 아니라 <code>catalog.json</code>에 들어갑니다. zip을 만들면 아래에 catalog에 붙여넣을 줄을 함께 만들어 드려요.</p>
+  </section>
+
+  <!-- 2. 캐릭터 상태 -->
+  <section class="card">
+    <h2>2. 캐릭터 상태별 프레임</h2>
+    <p class="hint">상태별로 이미지를 올리면 순서대로 <code>stop_01.png, stop_02.png…</code> 처럼 자동 명명됩니다. 프레임 1장이면 정지 이미지, 여러 장이면 그 간격(ms)으로 애니메이션됩니다.</p>
+    <div class="grid" id="stateWrap"></div>
+  </section>
+
+  <!-- 3. 타이머 디자인 -->
+  <section class="card">
+    <h2>3. 타이머 디자인</h2>
+    <p class="hint">모든 테마는 타이머 디자인을 포함합니다(필수). 배경·버튼·숫자폰트를 지정하세요. 비워둔 항목은 앱 내장 기본값으로 폴백됩니다.</p>
+
+    <div id="timerBody" style="margin-top:4px">
+      <div class="grid">
+        <div class="state-card">
+          <h3>타이머 배경 PNG</h3>
+          <p class="sub">박스·구분선이 모두 그려진 한 장. 가로 레이아웃(시간 좌 / 버튼 우) 기준. 없으면 내장 박스로 폴백.</p>
+          <div id="asset_background"></div>
+        </div>
+
+        <details class="opt">
+          <summary>버튼 그림 (선택 — 올리면 buttonStyle = skin)</summary>
+          <div class="body grid">
+            <p class="sub" style="margin:0">누락된 버튼은 앱 내장 기호로 자동 폴백됩니다. play/pause는 시작·일시정지 슬롯에서 상태에 따라 바뀝니다.</p>
+            <div id="asset_minus"></div>
+            <div id="asset_plus"></div>
+            <div id="asset_play"></div>
+            <div id="asset_pause"></div>
+            <div id="asset_stop"></div>
+            <label class="field"><span>buttonStyle</span>
+              <select id="buttonStyle">
+                <option value="default">default — 내장 기호 버튼</option>
+                <option value="skin">skin — 올린 버튼 PNG 사용</option>
+                <option value="none">none — 버튼 그림 없음(탭만)</option>
+              </select>
+            </label>
+          </div>
+        </details>
+
+        <details class="opt">
+          <summary>숫자 폰트 (선택)</summary>
+          <div class="body grid">
+            <p class="sub" style="margin:0">.ttf를 올리면 숫자를 그 폰트로 렌더링합니다(이때 크기는 영역에 맞춰지고 sizeSp는 무시). 색만 바꾸려면 폰트는 비우고 색만 지정하세요.</p>
+            <div id="asset_font"></div>
+            <div class="grid two">
+              <label class="field"><span>숫자 색 (#RRGGBB, 선택)</span>
+                <input type="text" id="fontColor" placeholder="#FFFFFF" autocomplete="off"></label>
+              <label class="field"><span>크기 sizeSp (선택, .ttf 없을 때만 적용)</span>
+                <input type="number" id="fontSize" placeholder="30" min="1" step="1"></label>
+            </div>
+            <label class="field"><span>내장 패밀리 (선택, .ttf 없을 때만)</span>
+              <select id="fontFamily">
+                <option value="">(지정 안 함 — monospace 기본)</option>
+                <option value="monospace">monospace</option>
+                <option value="sans-serif">sans-serif</option>
+                <option value="sans-serif-condensed">sans-serif-condensed</option>
+                <option value="serif">serif</option>
+              </select>
+            </label>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- catalog.json 줄 -->
+  <section class="card">
+    <h2>4. catalog.json에 추가할 줄</h2>
+    <p class="hint">디자인레포 <code>catalog.json</code>의 <code>"skins"</code> 배열에 이 줄을 추가해야 상점에 노출됩니다. (이 줄을 안 넣으면 zip·preview를 올려도 안 뜸)</p>
+    <pre class="preview-json" id="catalogSnippet" style="max-height:none">기본 정보를 입력하세요.</pre>
+    <button class="pick" id="copyCatalog" type="button" style="margin-top:10px">📋 이 줄 복사</button>
+    <span id="copyMsg" style="margin-left:10px;font-size:12.5px;color:var(--ok)"></span>
+  </section>
+
+  <!-- 미리보기 -->
+  <details class="opt" style="background:#fff">
+    <summary>생성될 skin.json 미리보기</summary>
+    <div class="body"><pre class="preview-json" id="jsonPreview">기본 정보를 입력하면 여기에 표시됩니다.</pre></div>
+  </details>
+</main>
+
+<footer>
+  <div class="status" id="status"></div>
+  <button class="btn-make" id="makeBtn">⬇ character.zip 만들기</button>
+</footer>
+
+<script>
+const STATES = [
+  { key: "stop",     title: "정지", sub: "타이머 미작동 기본 모습", req: true,  defDur: 1000 },
+  { key: "running",  title: "작동", sub: "타이머 카운트다운 중", req: true,  defDur: 500 },
+  { key: "pause",    title: "일시정지", sub: "비우면 정지 프레임으로 폴백", req: false, defDur: 1000 },
+  { key: "complete", title: "완료", sub: "타이머 종료(0초) 모습", req: true,  defDur: 800 },
+];
+const BUTTONS = [
+  { key: "minus", label: "− 감소(minus)" },
+  { key: "plus",  label: "＋ 증가(plus)" },
+  { key: "play",  label: "▶ 시작(play)" },
+  { key: "pause", label: "❚❚ 일시정지(pause)" },
+  { key: "stop",  label: "■ 정지(stop)" },
+];
+
+// 상태별 프레임 저장소: { stop:{frames:[{file,url}], durId}, ... }
+const store = {};
+STATES.forEach(s => store[s.key] = { frames: [], dur: s.defDur, pingpong: false });
+// 단일 에셋 저장소: background, minus.., font
+const assets = {};
+
+let frameSeq = 0;
+
+function extOf(name, fallback) {
+  const m = /\.([a-zA-Z0-9]+)$/.exec(name || "");
+  return m ? m[1].toLowerCase() : fallback;
+}
+function pad2(n) { return String(n).padStart(2, "0"); }
+
+/* ---------- 캐릭터 상태 카드 ---------- */
+function buildStateCards() {
+  const wrap = document.getElementById("stateWrap");
+  STATES.forEach(s => {
+    const card = document.createElement("div");
+    card.className = "state-card" + (s.req ? " req" : "");
+    card.innerHTML = `
+      <h3>${s.title}</h3>
+      <p class="sub">${s.sub}</p>
+      <div class="drop" data-state="${s.key}">＋ 이미지 끌어다 놓기 / 클릭해서 선택 (여러 장 가능)</div>
+      <ul class="frames" id="frames_${s.key}"></ul>
+      <div class="dur">프레임 간격 <input type="number" min="50" step="50" value="${s.defDur}" data-dur="${s.key}"> ms</div>
+      <label class="loopchk"><input type="checkbox" data-pingpong="${s.key}"> 순환(왕복) — 01-02-03-04-03-02 식으로 되돌아오며 한 세트</label>`;
+    wrap.appendChild(card);
+
+    const drop = card.querySelector(".drop");
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = "image/*"; input.multiple = true; input.style.display = "none";
+    card.appendChild(input);
+    drop.addEventListener("click", () => input.click());
+    input.addEventListener("change", () => { addFrames(s.key, input.files); input.value = ""; });
+    drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+    drop.addEventListener("drop", e => {
+      e.preventDefault(); drop.classList.remove("over");
+      addFrames(s.key, e.dataTransfer.files);
+    });
+    card.querySelector("[data-dur]").addEventListener("input", e => {
+      store[s.key].dur = parseInt(e.target.value) || s.defDur; refresh();
+    });
+    card.querySelector("[data-pingpong]").addEventListener("change", e => {
+      store[s.key].pingpong = e.target.checked; refresh();
+    });
+  });
+}
+
+function addFrames(stateKey, fileList) {
+  [...fileList].filter(f => f.type.startsWith("image/")).forEach(f => {
+    store[stateKey].frames.push({ id: ++frameSeq, file: f, url: URL.createObjectURL(f) });
+  });
+  renderFrames(stateKey); refresh();
+}
+
+function renderFrames(stateKey) {
+  const ul = document.getElementById("frames_" + stateKey);
+  ul.innerHTML = "";
+  store[stateKey].frames.forEach((fr, i) => {
+    const ext = extOf(fr.file.name, "png");
+    const name = `${stateKey}_${pad2(i + 1)}.${ext}`;
+    const li = document.createElement("li");
+    li.className = "frame";
+    li.innerHTML = `
+      <img src="${fr.url}" alt="">
+      <div class="nm" title="${name}">${name}</div>
+      <div class="ops">
+        <button data-act="up" title="앞으로">▲</button>
+        <button data-act="down" title="뒤로">▼</button>
+        <button data-act="del" class="del" title="삭제">✕</button>
+      </div>`;
+    li.querySelector('[data-act=up]').onclick = () => move(stateKey, i, -1);
+    li.querySelector('[data-act=down]').onclick = () => move(stateKey, i, 1);
+    li.querySelector('[data-act=del]').onclick = () => {
+      URL.revokeObjectURL(fr.url);
+      store[stateKey].frames.splice(i, 1); renderFrames(stateKey); refresh();
+    };
+    ul.appendChild(li);
+  });
+}
+
+function move(stateKey, i, dir) {
+  const arr = store[stateKey].frames;
+  const j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  renderFrames(stateKey); refresh();
+}
+
+/* ---------- 단일 에셋 (배경/버튼/폰트) ---------- */
+function buildAssetSlot(slotId, label, accept) {
+  const host = document.getElementById("asset_" + slotId);
+  if (!host) return;
+  const input = document.createElement("input");
+  input.type = "file"; input.accept = accept; input.style.display = "none";
+  const view = document.createElement("div");
+  host.appendChild(view); host.appendChild(input);
+
+  function render() {
+    const a = assets[slotId];
+    if (!a) {
+      view.innerHTML = `<div class="single-asset">
+        <div class="thumb" style="display:flex;align-items:center;justify-content:center;color:#c2c8d0;font-size:22px">＋</div>
+        <div class="meta"><b>${label}</b>파일 없음</div>
+        <button class="pick" type="button">파일 선택</button></div>`;
+      view.querySelector(".pick").onclick = () => input.click();
+      view.querySelector(".thumb").onclick = () => input.click();
+    } else {
+      const isImg = a.file.type.startsWith("image/");
+      view.innerHTML = `<div class="single-asset">
+        ${isImg ? `<img class="thumb" src="${a.url}">`
+                : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;color:#5b7cfa;font-size:11px;font-weight:700">TTF</div>`}
+        <div class="meta"><b>${label}</b><span title="${a.outName}">${a.outName}</span></div>
+        <button class="clear-x" type="button" title="제거">✕</button></div>`;
+      view.querySelector(".clear-x").onclick = () => {
+        if (a.url) URL.revokeObjectURL(a.url);
+        delete assets[slotId]; render(); refresh();
+      };
+    }
+  }
+  input.addEventListener("change", () => {
+    const f = input.files[0]; input.value = "";
+    if (!f) return;
+    assets[slotId] = { slotId, file: f, url: URL.createObjectURL(f), outName: outNameFor(slotId, f) };
+    render(); refresh();
+  });
+  render();
+}
+
+function outNameFor(slotId, file) {
+  if (slotId === "background") return `timer_bg.${extOf(file.name, "png")}`;
+  if (slotId === "font")       return `font.${extOf(file.name, "ttf")}`;
+  return `btn_${slotId}.${extOf(file.name, "png")}`; // minus/plus/play/pause/stop
+}
+
+/* ---------- 검증 + skin.json 생성 ---------- */
+function buildSkinJson() {
+  const skinId = document.getElementById("skinId").value.trim();
+  const name = document.getElementById("name").value.trim();
+  const price = Math.max(0, parseInt(document.getElementById("price").value) || 0);
+  const isFree = price <= 0; // skin.json isFree는 가격에서 도출(가격 자체는 catalog.json에만)
+  const prestige = document.getElementById("prestige").checked;
+  const errors = [];
+
+  if (!/^[A-Za-z0-9_]+$/.test(skinId)) errors.push("skinId는 영문/숫자/_ 만 사용하세요.");
+  if (!name) errors.push("테마 이름을 입력하세요.");
+
+  function frameSet(stateKey) {
+    const arr = store[stateKey].frames;
+    if (!arr.length) return null;
+    let names = arr.map((fr, i) => `${stateKey}_${pad2(i + 1)}.${extOf(fr.file.name, "png")}`);
+    if (store[stateKey].pingpong && names.length > 2) {
+      // 01-02-03-04-03-02 식: 정방향 + 양 끝을 뺀 역방향
+      names = names.concat(names.slice(1, -1).reverse());
+    }
+    return {
+      frames: names,
+      frameDurationMs: store[stateKey].dur,
+    };
+  }
+
+  STATES.filter(s => s.req).forEach(s => {
+    if (!store[s.key].frames.length) errors.push(`'${s.title}' 상태 이미지를 1장 이상 올리세요.`);
+  });
+
+  const character = {
+    stop: frameSet("stop"),
+    running: { default: frameSet("running") },
+    complete: frameSet("complete"),
+  };
+  if (store.pause.frames.length) character.pause = frameSet("pause");
+
+  const json = { skinId, name, isFree, ...(prestige ? { prestige: true } : {}), character };
+
+  {
+    const timer = {};
+    if (assets.background) timer.background = assets.background.outName;
+    const btnObj = {};
+    BUTTONS.forEach(b => { if (assets[b.key]) btnObj[b.key] = assets[b.key].outName; });
+    const buttonStyle = document.getElementById("buttonStyle").value;
+    timer.buttonStyle = buttonStyle;
+    if (Object.keys(btnObj).length) timer.buttons = btnObj;
+    if (buttonStyle === "default" && Object.keys(btnObj).length) {
+      // 버튼을 올렸는데 style이 default면 적용 안 됨 → 안내
+      errors.push("버튼 PNG를 올렸다면 buttonStyle을 'skin'으로 바꾸세요(현재 default라 무시됨).");
+    }
+    if (!assets.background) timer.showBox = true; // 배경 없으면 내장 박스 폴백
+
+    const font = {};
+    if (assets.font) font.file = assets.font.outName;
+    const fc = document.getElementById("fontColor").value.trim();
+    const fs = document.getElementById("fontSize").value.trim();
+    const ff = document.getElementById("fontFamily").value;
+    if (fc) {
+      if (!/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(fc)) errors.push("숫자 색은 #RRGGBB 또는 #AARRGGBB 형식이어야 합니다.");
+      else font.color = fc;
+    }
+    if (fs) font.sizeSp = parseFloat(fs);
+    if (ff && !assets.font) font.family = ff;
+    if (Object.keys(font).length) timer.font = font;
+
+    json.timer = timer;
+  }
+
+  return { json, errors, skinId, price, prestige };
+}
+
+/* ---------- 미리보기 + 상태 ---------- */
+function refresh() {
+  const { json, errors, skinId, price, prestige } = buildSkinJson();
+  document.getElementById("jsonPreview").textContent = JSON.stringify(json, null, 2);
+
+  // 가격 힌트
+  document.getElementById("priceHint").textContent =
+    price <= 0 ? "→ 무료 테마" : `→ ${price.toLocaleString()}원`;
+
+  // catalog.json 줄
+  const snip = document.getElementById("catalogSnippet");
+  if (skinId && json.name) {
+    const line = { skinId, name: json.name, price, prestige, version: 1 };
+    snip.textContent = JSON.stringify(line).replace(/,/g, ", ").replace(/:/g, ": ");
+  } else {
+    snip.textContent = "skinId와 이름을 입력하세요.";
+  }
+
+  const status = document.getElementById("status");
+  const btn = document.getElementById("makeBtn");
+  if (errors.length) {
+    status.innerHTML = `<span class="errs">⚠ ${errors[0]}${errors.length > 1 ? ` (외 ${errors.length - 1}건)` : ""}</span>`;
+    btn.disabled = true;
+  } else {
+    status.textContent = `준비 완료 → ${skinId}.zip`;
+    btn.disabled = false;
+  }
+}
+
+/* ---------- zip 생성 ---------- */
+async function makeZip() {
+  const { json, errors, skinId } = buildSkinJson();
+  if (errors.length) { alert("아직 다음 문제가 있어요:\n\n- " + errors.join("\n- ")); return; }
+
+  const zip = new JSZip();
+  const root = zip.folder(skinId); // 앱이 공통 루트 폴더를 자동으로 벗겨냄
+
+  // skin.json
+  root.file("skin.json", JSON.stringify(json, null, 2));
+
+  // 캐릭터 프레임 (재명명)
+  for (const s of STATES) {
+    store[s.key].frames.forEach((fr, i) => {
+      const nm = `${s.key}_${pad2(i + 1)}.${extOf(fr.file.name, "png")}`;
+      root.file(nm, fr.file);
+    });
+  }
+  // 타이머 에셋
+  if (assets.background) root.file(assets.background.outName, assets.background.file);
+  BUTTONS.forEach(b => { if (assets[b.key]) root.file(assets[b.key].outName, assets[b.key].file); });
+  if (assets.font) root.file(assets.font.outName, assets.font.file);
+
+  const btn = document.getElementById("makeBtn");
+  btn.disabled = true; btn.textContent = "압축 중…";
+  const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${skinId}.zip`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  btn.textContent = "⬇ character.zip 만들기"; btn.disabled = false;
+}
+
+/* ---------- init ---------- */
+buildStateCards();
+buildAssetSlot("background", "타이머 배경", "image/*");
+BUTTONS.forEach(b => buildAssetSlot(b.key, b.label, "image/*"));
+buildAssetSlot("font", "숫자 폰트(.ttf)", ".ttf,font/ttf,application/octet-stream");
+
+["skinId", "name", "price", "prestige", "buttonStyle", "fontColor", "fontSize", "fontFamily"].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener("input", refresh);
+  el.addEventListener("change", refresh);
+});
+document.getElementById("makeBtn").addEventListener("click", makeZip);
+document.getElementById("copyCatalog").addEventListener("click", () => {
+  const txt = document.getElementById("catalogSnippet").textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const msg = document.getElementById("copyMsg");
+    msg.textContent = "복사됨!";
+    setTimeout(() => msg.textContent = "", 1500);
+  });
+});
+refresh();
+</script>
+</body>
+</html>
