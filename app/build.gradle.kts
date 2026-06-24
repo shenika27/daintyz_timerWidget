@@ -36,8 +36,14 @@ android {
     }
 
     buildFeatures {
-        // RemoteViews 기반 위젯이므로 Compose는 사용하지 않는다 (설계 문서 4-1 참고)
+        // 위젯은 RemoteViews(Compose 불가)지만, 앱 화면은 Jetpack Compose로 전환됨.
         viewBinding = true
+        compose = true
+    }
+
+    composeOptions {
+        // Kotlin 1.9.24 호환 Compose 컴파일러.
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 }
 
@@ -50,6 +56,18 @@ dependencies {
     implementation("androidx.viewpager2:viewpager2:1.1.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+
+    // ---- Jetpack Compose (앱 화면) ----
+    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    implementation(composeBom)
+    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

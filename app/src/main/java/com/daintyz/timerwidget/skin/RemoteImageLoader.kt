@@ -65,6 +65,21 @@ object RemoteImageLoader {
         }
     }
 
+    /**
+     * Compose 등 View가 아닌 곳에서 쓰는 콜백 로더. 캐시 우선, 백그라운드 fetch 후 메인 스레드로 결과 전달.
+     * 실패하면 null을 콜백한다.
+     */
+    fun request(url: String, onResult: (Bitmap?) -> Unit) {
+        cache[url]?.let { onResult(it); return }
+        executor.execute {
+            val bitmap = runCatching { fetch(url) }
+                .onFailure { Log.w(TAG, "이미지 로드 실패: $url", it) }
+                .getOrNull()
+                ?.also { cache[url] = it }
+            mainHandler.post { onResult(bitmap) }
+        }
+    }
+
     private fun fetch(url: String): Bitmap? {
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
