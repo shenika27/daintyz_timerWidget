@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  타이머 영역(가로 배치): 왼쪽 시간(~80%) + 오른쪽 버튼 2개 세로 컬럼(~20%).
+  타이머 영역(가로 배치). 가로 비율은 cha01 배경 템플릿(timer_bg.png, 700x217px)을 기준으로
+  잡은 "타이머 디자인 가이드"다. 배경의 흰 시간박스/회색 버튼슬롯 위치에 컨텐츠를 정렬한다.
+   ┌ left_sp 11% ┬──── time_area 67% ────┬─ btn_row 14% ─┬ right_sp 8% ┐
+   │ (좌측 경첩)  │   흰색 시간박스 11~78%   │ 회색 슬롯 78~92% │ (우측 장식)  │
+  → 신규 타이머 배경 PNG는 이 비율(흰박스 11~78%, 버튼슬롯 78~92%)에 맞춰 그리면 정렬이 맞는다.
    - 박스/세로선(시간↔버튼)/버튼사이 가로선은 모두 스킨의 timer_theme 배경(iv_timer_bg)에 그려진다.
      코드가 그리던 div_* 구분선은 제거됨 (모든 상태에서 선 구성이 동일해졌기 때문).
+   - left_sp/right_sp 는 배경의 좌측 경첩·우측 장식을 비워두기 위한 빈 스페이서다(배경이 비쳐 보임).
+     RemoteViews에서 raw <View>는 "위젯 로드 실패"를 유발하므로 빈 FrameLayout으로 채운다.
    - 버튼은 ImageView(클릭 영역)이며, 그림은 스킨 PNG(5종) 또는 내장 벡터, 노스킨은 투명(영역 유지).
    - 버튼 컬럼 자식(위→아래): [plus][minus][start_pause][stop]. 상태별로 2개만 VISIBLE(나머지 GONE 접힘).
        IDLE/COMPLETE → plus, minus / RUNNING·PAUSED → start_pause, stop.
@@ -27,15 +33,23 @@
         android:layout_height="match_parent"
         android:background="@drawable/timer_box_bg"
         android:orientation="horizontal"
-        android:padding="0dp">
+        android:padding="0dp"
+        android:weightSum="100">
 
-        <!-- 시간 표시(좌측 ~80%). 영역(time_area) 전체가 시작/일시정지 탭 타깃.
+        <!-- 좌측 스페이서: 배경의 왼쪽 경첩 장식 자리(0~11%)를 비워둔다. -->
+        <FrameLayout
+            android:id="@+id/timer_left_spacer"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="11" />
+
+        <!-- 시간 표시(흰 박스 11~78%). 영역(time_area) 전체가 시작/일시정지 탭 타깃.
              내장 폰트 = tv_timer_value(TextView), 커스텀 폰트(.ttf) = iv_timer_value(비트맵). 코드가 둘 중 하나만 표시. -->
         <FrameLayout
             android:id="@+id/time_area"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="4">
+            android:layout_weight="67">
 
             <TextView
                 android:id="@+id/tv_timer_value"
@@ -50,25 +64,25 @@
                 android:textSize="30sp"
                 android:textStyle="bold" />
 
-            <!-- 커스텀 폰트 숫자 비트맵 자리. fitCenter로 영역에 맞춰 축소. 평소 GONE. -->
+            <!-- 커스텀 폰트 숫자 비트맵 자리. fitCenter로 영역(흰 박스) 전체에 맞춰 축소. 평소 GONE.
+                 숫자 여백(=크기감)은 dp padding이 아니라 WidgetUpdater.PAD_FRAC(비례 여백)으로 정한다.
+                 dp padding은 위젯/미리보기 영역 크기 차이로 숫자 크기를 어긋나게 하므로 두지 않는다. -->
             <ImageView
                 android:id="@+id/iv_timer_value"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:contentDescription="@null"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="4dp"
                 android:scaleType="fitCenter"
                 android:visibility="gone" />
 
         </FrameLayout>
 
-        <!-- 버튼 세로 컬럼(우측 ~20%). 항상 2개만 보이며 컬럼 높이를 균등 2분할. -->
+        <!-- 버튼 세로 컬럼(회색 슬롯 78~92%). 항상 2개만 보이며 컬럼 높이를 균등 2분할. -->
         <LinearLayout
             android:id="@+id/btn_row"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_weight="14"
             android:orientation="vertical">
 
             <ImageView
@@ -98,6 +112,13 @@
                 android:visibility="gone" />
 
         </LinearLayout>
+
+        <!-- 우측 스페이서: 배경의 오른쪽 장식(경첩) 자리(92~100%)를 비워둔다. -->
+        <FrameLayout
+            android:id="@+id/timer_right_spacer"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="8" />
 
     </LinearLayout>
 

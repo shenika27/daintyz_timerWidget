@@ -115,7 +115,14 @@ object WidgetUpdater {
         font?.sizeSp?.let { views.setTextViewTextSize(R.id.tv_timer_value, TypedValue.COMPLEX_UNIT_SP, it) }
     }
 
-    /** 시간 문자열을 커스텀 Typeface로 그린 비트맵. fitCenter ImageView가 시간 영역에 맞춰 축소한다. */
+    /**
+     * 시간 문자열을 커스텀 Typeface로 그린 비트맵. fitCenter ImageView가 시간 영역에 맞춰 축소한다.
+     *
+     * 숫자의 "크기감"(흰 박스 안 여백)은 **비트맵에 비례(%)로 굽는 [PAD_FRAC]**으로 정한다.
+     * iv_timer_value의 dp padding으로 정하면 영역이 작은 위젯과 큰 미리보기에서 padding 비율이 달라져
+     * 숫자 크기가 어긋난다(절대 dp / 가변 영역). 비례 여백은 fitCenter가 영역에 맞춰 같이 스케일되므로
+     * 위젯·미리보기에서 동일한 비율을 유지한다.
+     */
     private fun renderTimeBitmap(text: String, typeface: Typeface, colorInt: Int): Bitmap {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
@@ -125,13 +132,18 @@ object WidgetUpdater {
         }
         val bounds = Rect()
         paint.getTextBounds(text, 0, text.length, bounds)
-        val pad = 8
-        val w = (bounds.width() + pad * 2).coerceAtLeast(1)
-        val h = (bounds.height() + pad * 2).coerceAtLeast(1)
+        // 글자 변의 PAD_FRAC 만큼을 사방 투명 여백으로 → 채움 비율 = 1/(1+2*PAD_FRAC) (값↑ = 숫자 작아짐).
+        val padX = (bounds.width() * PAD_FRAC).toInt()
+        val padY = (bounds.height() * PAD_FRAC).toInt()
+        val w = (bounds.width() + padX * 2).coerceAtLeast(1)
+        val h = (bounds.height() + padY * 2).coerceAtLeast(1)
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        Canvas(bitmap).drawText(text, (pad - bounds.left).toFloat(), (pad - bounds.top).toFloat(), paint)
+        Canvas(bitmap).drawText(text, (padX - bounds.left).toFloat(), (padY - bounds.top).toFloat(), paint)
         return bitmap
     }
+
+    /** 커스텀 폰트 숫자의 사방 여백 비율(글자 변 대비). cha01 'comfort' 가이드 ≈ 채움 77%. 키우면 숫자가 작아진다. */
+    private const val PAD_FRAC = 0.15f
 
     private fun formatMillis(millis: Long): String {
         val totalSeconds = (millis + 999) / 1000 // 올림: 표시상 0:00이 너무 빨리 뜨지 않게

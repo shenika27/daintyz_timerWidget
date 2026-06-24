@@ -89,29 +89,22 @@ class MainActivity : AppCompatActivity() {
         else -> 0
     }
 
-    /** VaultItem 상세/미리보기 화면으로 이동. 보유 → 애니 미리보기, 미보유 → prev 이미지 + 구매 화면. */
+    /** VaultItem 상세/미리보기 화면(Compose 캐러셀)으로 이동. 보유=상태 스와이프, 미보유=prev 스와이프. */
     private fun openDetail(item: VaultItem) {
-        if (item.owned) {
-            startActivity(Intent(this, PreviewActivity::class.java).apply {
-                putExtra(PreviewActivity.EXTRA_SKIN_ID, item.id)
-                putExtra(PreviewActivity.EXTRA_AREA, PreviewActivity.AREA_CHARACTER)
-            })
-        } else {
-            startActivity(Intent(this, SkinDetailActivity::class.java).apply {
-                putExtra(SkinDetailActivity.EXTRA_SKIN_ID, item.id)
-                putExtra(SkinDetailActivity.EXTRA_NAME, item.name)
-                putExtra(SkinDetailActivity.EXTRA_IS_FREE, item.isFree)
-                putExtra(SkinDetailActivity.EXTRA_PRICE, item.price)
-                putExtra(SkinDetailActivity.EXTRA_PRESTIGE, item.prestige)
-                putExtra(SkinDetailActivity.EXTRA_OWNED, false)
-                if (item is VaultItem.Remote) {
-                    putExtra(SkinDetailActivity.EXTRA_ZIP_URL, item.entry.zipUrl)
-                    putExtra(SkinDetailActivity.EXTRA_PREVIEW_BASE, item.entry.baseUrl)
-                } else {
-                    putExtra(SkinDetailActivity.EXTRA_PREVIEW_BASE, SkinRepoUrls.ASSET_BASE)
-                }
-            })
-        }
+        startActivity(Intent(this, DetailActivity::class.java).apply {
+            putExtra(DetailActivity.EXTRA_SKIN_ID, item.id)
+            putExtra(DetailActivity.EXTRA_NAME, item.name)
+            putExtra(DetailActivity.EXTRA_OWNED, item.owned)
+            putExtra(DetailActivity.EXTRA_IS_FREE, item.isFree)
+            putExtra(DetailActivity.EXTRA_PRICE, item.price)
+            putExtra(DetailActivity.EXTRA_PRESTIGE, item.prestige)
+            if (item is VaultItem.Remote) {
+                putExtra(DetailActivity.EXTRA_ZIP_URL, item.entry.zipUrl)
+                putExtra(DetailActivity.EXTRA_PREVIEW_BASE, item.entry.baseUrl)
+            } else {
+                putExtra(DetailActivity.EXTRA_PREVIEW_BASE, SkinRepoUrls.ASSET_BASE)
+            }
+        })
     }
 
     private fun requestNotificationPermissionIfNeeded() {

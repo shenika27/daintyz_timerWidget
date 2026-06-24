@@ -79,6 +79,18 @@
     <string name="preview_state_complete">완료</string>
     <string name="cd_preview_widget">위젯 미리보기</string>
 
+    <!-- 상세/미리보기 캐러셀 (상태 스와이프) -->
+    <string name="detail_state_idle">정지</string>
+    <string name="detail_state_run">진행 중</string>
+    <string name="detail_state_paused">중단</string>
+    <string name="detail_state_complete">완료</string>
+    <string name="detail_apply">적용하기</string>
+    <string name="detail_applied">적용 중</string>
+    <!-- 구매 버튼: %1$s = "12,000원" -->
+    <string name="detail_buy_price">구매하기 (%1$s)</string>
+    <string name="detail_preview_empty">미리보기 이미지를 불러오는 중…</string>
+    <string name="cd_detail_back">뒤로</string>
+
     <!-- 하단 탭 네비게이션 -->
     <string name="nav_vault">보유</string>
     <string name="nav_store">상점</string>
