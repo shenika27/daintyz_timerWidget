@@ -150,7 +150,16 @@ fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
             return@Column
         }
 
-        val pagerState = rememberPagerState(pageCount = { items.size })
+        // 첫 진입 시 '적용 중'인 테마로 포커싱(예: 9개 중 적용중이 2번이면 2/9로 시작).
+        // appliedId 상태는 진입 직후 아직 null이라, 설정값에서 직접 동기 계산해 초기 페이지로 쓴다.
+        // remember(키 없음) → 화면 최초 1회만 계산(이후 사용자가 넘긴 위치는 유지).
+        val initialPage = remember {
+            val d = TimerPreferences.get(context).load()
+            val appId = if (d.selectedCharacterSkinId == d.selectedTimerSkinId)
+                d.selectedCharacterSkinId else null
+            items.indexOfFirst { it.id == appId }.coerceAtLeast(0)
+        }
+        val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { items.size })
         val focused = items.getOrNull(pagerState.currentPage) ?: items.first()
 
         // 테마 이름.
