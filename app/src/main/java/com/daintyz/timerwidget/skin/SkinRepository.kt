@@ -142,6 +142,8 @@ object SkinRepository {
             name = json.getString("name"),
             isFree = json.optBoolean("isFree", false),
             prestige = json.optBoolean("prestige", false),
+            description = json.optString("description").ifBlank { null },
+            createdAt = json.optString("createdAt").ifBlank { null },
             character = CharacterStates(
                 stop = parseFrameSet(character.getJSONObject("stop")),
                 running = parseRunningState(character.getJSONObject("running")),

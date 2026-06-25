@@ -2,6 +2,8 @@
   "skinId": "cha01",
   "name": "런닝하는 홉빵",
   "isFree": true,
+  "description": "달릴수록 빨라지는 홉빵",
+  "createdAt": "2026-06-25",
   "character": {
     "stop": {
       "frames": [

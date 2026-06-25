@@ -14,6 +14,10 @@ data class Skin(
      * skin.json의 "prestige" 플래그에서 파싱(없으면 false). 상점에서 별도 표시한다.
      */
     val prestige: Boolean,
+    /** 상점 히어로 카드 부제(한 줄 설명). 없으면 카드에서 부제 줄 생략. */
+    val description: String? = null,
+    /** 출시일("yyyy-MM-dd"). 상점 NEW 배지 판정 기준(출시일+7일 이내). 없으면 NEW 안 뜸. */
+    val createdAt: String? = null,
     val character: CharacterStates,
     /**
      * 타이머 영역 스킨 (설계: "기능=영역, 버튼=그림").

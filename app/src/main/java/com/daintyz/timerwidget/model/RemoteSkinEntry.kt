@@ -20,5 +20,9 @@ data class RemoteSkinEntry(
     /** 테마 썸네일 PNG URL (preview/{id}/thumb.png) — 상점/타이머 탭 공용. */
     val thumbnailUrl: String,
     /** 미리보기 에셋 베이스 URL(catalog baseUrl 또는 jsDelivr ASSET_BASE). 상세화면이 prevNN.png를 유추하는 기준. */
-    val baseUrl: String
+    val baseUrl: String,
+    /** 상점 히어로 카드 부제(한 줄 설명). 없으면 카드에서 부제 줄 생략. */
+    val description: String? = null,
+    /** 출시일("yyyy-MM-dd"). 상점 NEW 배지 판정 기준(출시일+7일 이내). 없으면 NEW 안 뜸. */
+    val createdAt: String? = null
 )

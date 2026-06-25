@@ -33,7 +33,7 @@
   .grid.two { grid-template-columns: 1fr 1fr; }
   label.field { display: block; font-size: 13px; }
   label.field > span { display: block; margin-bottom: 5px; color: var(--sub); font-weight: 600; }
-  input[type=text], input[type=number], select {
+  input[type=text], input[type=number], input[type=date], select {
     width: 100%; padding: 9px 10px; border: 1px solid var(--line);
     border-radius: 8px; font-size: 14px; background: #fff; color: var(--ink);
   }
@@ -135,6 +135,12 @@
       <label class="field"><span>가격 (원) — 0이면 무료</span>
         <input type="number" id="price" min="0" step="100" value="0" autocomplete="off"></label>
       <div style="display:flex;align-items:flex-end;padding-bottom:9px;font-size:13px;color:var(--sub)" id="priceHint">→ 무료 테마</div>
+    </div>
+    <div class="grid two" style="margin-top:12px">
+      <label class="field"><span>부제 (상점 카드 한 줄 설명, 선택)</span>
+        <input type="text" id="description" placeholder="달 위를 뛰는 토끼" autocomplete="off"></label>
+      <label class="field"><span>출시일 (NEW 배지 — 출시일+7일 이내 자동 표시)</span>
+        <input type="date" id="createdAt" autocomplete="off"></label>
     </div>
     <div style="margin-top:12px">
       <label class="check"><input type="checkbox" id="prestige"> ✦ 프리스티지(희귀) 스킨</label>
@@ -388,6 +394,8 @@ function buildSkinJson() {
   const price = Math.max(0, parseInt(document.getElementById("price").value) || 0);
   const isFree = price <= 0; // skin.json isFree는 가격에서 도출(가격 자체는 catalog.json에만)
   const prestige = document.getElementById("prestige").checked;
+  const description = document.getElementById("description").value.trim();
+  const createdAt = document.getElementById("createdAt").value.trim(); // date 인풋 → "yyyy-mm-dd"
   const errors = [];
 
   if (!/^[A-Za-z0-9_]+$/.test(skinId)) errors.push("skinId는 영문/숫자/_ 만 사용하세요.");
@@ -418,7 +426,13 @@ function buildSkinJson() {
   };
   if (store.pause.frames.length) character.pause = frameSet("pause");
 
-  const json = { skinId, name, isFree, ...(prestige ? { prestige: true } : {}), character };
+  const json = {
+    skinId, name, isFree,
+    ...(prestige ? { prestige: true } : {}),
+    ...(description ? { description } : {}),
+    ...(createdAt ? { createdAt } : {}),
+    character,
+  };
 
   {
     const timer = {};
@@ -450,12 +464,12 @@ function buildSkinJson() {
     json.timer = timer;
   }
 
-  return { json, errors, skinId, price, prestige };
+  return { json, errors, skinId, price, prestige, description, createdAt };
 }
 
 /* ---------- 미리보기 + 상태 ---------- */
 function refresh() {
-  const { json, errors, skinId, price, prestige } = buildSkinJson();
+  const { json, errors, skinId, price, prestige, description, createdAt } = buildSkinJson();
   document.getElementById("jsonPreview").textContent = JSON.stringify(json, null, 2);
 
   // 가격 힌트
@@ -465,7 +479,12 @@ function refresh() {
   // catalog.json 줄
   const snip = document.getElementById("catalogSnippet");
   if (skinId && json.name) {
-    const line = { skinId, name: json.name, price, prestige, version: 1 };
+    const line = {
+      skinId, name: json.name, price, prestige,
+      ...(description ? { description } : {}),
+      ...(createdAt ? { createdAt } : {}),
+      version: 1,
+    };
     snip.textContent = JSON.stringify(line).replace(/,/g, ", ").replace(/:/g, ": ");
   } else {
     snip.textContent = "skinId와 이름을 입력하세요.";
@@ -522,7 +541,14 @@ buildAssetSlot("background", "타이머 배경", "image/*");
 BUTTONS.forEach(b => buildAssetSlot(b.key, b.label, "image/*"));
 buildAssetSlot("font", "숫자 폰트(.ttf)", ".ttf,font/ttf,application/octet-stream");
 
-["skinId", "name", "price", "prestige", "buttonStyle", "fontColor", "fontSize", "fontFamily"].forEach(id => {
+// 출시일 기본값 = 오늘(로컬 기준 yyyy-mm-dd). 새 스킨은 보통 만든 날 출시.
+(() => {
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  document.getElementById("createdAt").value = local;
+})();
+
+["skinId", "name", "price", "prestige", "description", "createdAt", "buttonStyle", "fontColor", "fontSize", "fontFamily"].forEach(id => {
   const el = document.getElementById(id);
   el.addEventListener("input", refresh);
   el.addEventListener("change", refresh);

@@ -62,7 +62,9 @@ object SkinDownloader {
                         zipUrl = obj.optString("zipUrl").ifBlank { "$baseUrl/character_zip/$skinId.zip" },
                         thumbnailUrl = obj.optString("thumbnailUrl")
                             .ifBlank { SkinRepoUrls.themeThumb(skinId, baseUrl) },
-                        baseUrl = baseUrl
+                        baseUrl = baseUrl,
+                        description = obj.optString("description").ifBlank { null },
+                        createdAt = obj.optString("createdAt").ifBlank { null }
                     )
                 }
             }

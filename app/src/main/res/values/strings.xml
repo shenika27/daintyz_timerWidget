@@ -66,6 +66,8 @@
     <string name="store_buy_stub">구매 기능은 준비 중입니다</string>
     <!-- 프리스티지(희귀) 스킨 배지 — 디자인 추후, 텍스트 틀만 -->
     <string name="skin_tag_prestige">✦ 프리스티지</string>
+    <!-- 신규(출시일+7일 이내) 스킨 배지 -->
+    <string name="skin_tag_new">NEW</string>
 
     <string name="cd_preview_widget">위젯 미리보기</string>
 
