@@ -19,6 +19,7 @@ class TimerPreferences private constructor(context: Context) {
     fun load(): TimerData = TimerData(
         state = TimerState.fromName(prefs.getString(KEY_STATE, null)),
         targetEndElapsed = prefs.getLong(KEY_TARGET_END_ELAPSED, 0L),
+        stateEnteredElapsed = prefs.getLong(KEY_STATE_ENTERED_ELAPSED, 0L),
         remainingMillisAtPause = prefs.getLong(KEY_REMAINING_AT_PAUSE, 0L),
         totalMillis = prefs.getLong(KEY_TOTAL_MILLIS, 0L),
         lastSetMinutes = prefs.getInt(KEY_LAST_SET_MINUTES, DEFAULT_MINUTES),
@@ -39,6 +40,7 @@ class TimerPreferences private constructor(context: Context) {
         prefs.edit().apply {
             putString(KEY_STATE, data.state.name)
             putLong(KEY_TARGET_END_ELAPSED, data.targetEndElapsed)
+            putLong(KEY_STATE_ENTERED_ELAPSED, data.stateEnteredElapsed)
             putLong(KEY_REMAINING_AT_PAUSE, data.remainingMillisAtPause)
             putLong(KEY_TOTAL_MILLIS, data.totalMillis)
             putInt(KEY_LAST_SET_MINUTES, data.lastSetMinutes)
@@ -79,6 +81,7 @@ class TimerPreferences private constructor(context: Context) {
 
         private const val KEY_STATE = "state"
         private const val KEY_TARGET_END_ELAPSED = "target_end_elapsed"
+        private const val KEY_STATE_ENTERED_ELAPSED = "state_entered_elapsed"
         private const val KEY_REMAINING_AT_PAUSE = "remaining_at_pause"
         private const val KEY_TOTAL_MILLIS = "total_millis"
         private const val KEY_LAST_SET_MINUTES = "last_set_minutes"

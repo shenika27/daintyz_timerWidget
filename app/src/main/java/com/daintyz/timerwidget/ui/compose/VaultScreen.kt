@@ -72,6 +72,13 @@ private const val CATALOG_URL =
     "https://raw.githubusercontent.com/shenika27/daintyz_timer_characterList/main/catalog.json"
 
 /**
+ * 캐러셀 카드에서 캐릭터(불투명 영역)가 차지할 목표 비율(카드 변 대비). '먹' 정도의 여유 있는 크기.
+ * 캐릭터가 이 비율보다 더 꽉 찬 스킨(예: cha01 '런닝하는 홉빵')만 이 크기로 줄이고,
+ * 이미 더 작은(여백 많은) 스킨은 건드리지 않는다(스케일 1로 클램프). 값↑ = 더 크게.
+ */
+private const val CARD_TARGET_FILL = 0.80f
+
+/**
  * 보유(테마) 화면 — 보유/미보유 통합 커버플로우 캐러셀 (Compose 재작성).
  * 정렬: 즐겨찾기 → 보유 → 미보유. 적용=캐릭터+타이머 동시. 미리보기=상세 화면.
  */
@@ -347,10 +354,15 @@ private fun VaultCard(
             when (item) {
                 is VaultItem.Local -> {
                     val bmp = localCardBitmap(item, isFocused)
+                    // 캔버스 여백이 거의 없는 스킨(꽉 차 보임)만 목표 크기로 축소(중심 스케일 → 움직임/등록 유지).
+                    val scale = rememberCardContentScale(item)
                     BitmapImage(
                         bitmap = bmp,
                         contentDescription = item.name,
-                        modifier = Modifier.fillMaxSize().padding(14.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(14.dp)
+                            .graphicsLayer { scaleX = scale; scaleY = scale },
                         contentScale = ContentScale.Fit,
                     )
                 }
@@ -448,6 +460,47 @@ private fun StarToggle(favorited: Boolean, onClick: () -> Unit, modifier: Modifi
                 .graphicsLayer { scaleX = scale.value; scaleY = scale.value },
         )
     }
+}
+
+/**
+ * 카드 캐릭터 표시 스케일(스킨별 1회 계산, 캐싱). 정지 프레임의 불투명 영역 비율을 재서,
+ * [CARD_TARGET_FILL]보다 꽉 찬 스킨만 그 크기로 줄이고(≤1) 이미 작은 스킨은 1.0 그대로 둔다.
+ */
+@Composable
+private fun rememberCardContentScale(item: VaultItem.Local): Float {
+    val context = LocalContext.current
+    return remember(item.id) {
+        val stopFrame = item.skin.character.stop.frames.first()
+        val bmp = SkinRepository.loadFrameBitmap(context, item.id, stopFrame)
+        val fill = bmp?.let { opaqueFillRatio(it) } ?: 1f
+        if (fill <= 0f) 1f else (CARD_TARGET_FILL / fill).coerceIn(0.5f, 1f)
+    }
+}
+
+/** 비트맵에서 불투명(알파>0) 영역이 캔버스 변 대비 차지하는 최대 비율(가로/세로 중 큰 쪽). 0~1. */
+private fun opaqueFillRatio(bmp: Bitmap): Float {
+    val w = bmp.width
+    val h = bmp.height
+    if (w <= 0 || h <= 0) return 1f
+    val pixels = IntArray(w * h)
+    bmp.getPixels(pixels, 0, w, 0, 0, w, h)
+    var minX = w; var minY = h; var maxX = -1; var maxY = -1
+    var i = 0
+    for (y in 0 until h) {
+        for (x in 0 until w) {
+            if ((pixels[i] ushr 24) != 0) {
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
+            }
+            i++
+        }
+    }
+    if (maxX < minX) return 1f // 전부 투명
+    val fw = (maxX - minX + 1).toFloat() / w
+    val fh = (maxY - minY + 1).toFloat() / h
+    return maxOf(fw, fh)
 }
 
 /** 로컬 카드 비트맵: 정지 1프레임. 포커스+보유면 running 프레임으로 100ms 틱 애니메이션. */

@@ -277,7 +277,8 @@ object WidgetUpdater {
         val ctx = FrameAnimationController.FrameContext(
             remainingMs = data.remainingMillis(nowElapsed),
             elapsedMs = (data.totalMillis - data.remainingMillis(nowElapsed)).coerceAtLeast(0L),
-            totalMs = data.totalMillis
+            totalMs = data.totalMillis,
+            stateEnteredElapsed = data.stateEnteredElapsed
         )
         val fileName = FrameAnimationController.currentFrameFile(skin, data.state, ctx, nowElapsed)
         val bitmap = SkinRepository.loadFrameBitmap(context, skin.skinId, fileName)

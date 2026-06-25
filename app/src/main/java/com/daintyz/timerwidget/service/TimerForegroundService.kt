@@ -17,6 +17,8 @@ import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.TimerState
 import com.daintyz.timerwidget.notification.TimerNotifications
 import com.daintyz.timerwidget.receiver.ScreenStateReceiver
+import com.daintyz.timerwidget.skin.FrameAnimationController
+import com.daintyz.timerwidget.skin.SkinRepository
 import com.daintyz.timerwidget.widget.WidgetUpdater
 
 /**
@@ -102,7 +104,16 @@ class TimerForegroundService : Service() {
                 WidgetUpdater.updateAllWidgets(this) // 승리 애니메이션 루프
                 scheduleNextIfScreenOn()
             }
-            TimerState.IDLE, TimerState.PAUSED -> stopCleanly() // 할 일 없음 → 종료
+            // 중지(IDLE)/일시정지(PAUSED): 일회성 애니메이션을 한 번 재생해야 하므로, 마지막 프레임에
+            // 도달할 때까지 틱을 이어가고 다 재생되면(또는 화면이 꺼지면) 종료한다. (루프 없음)
+            TimerState.IDLE, TimerState.PAUSED -> {
+                WidgetUpdater.updateAllWidgets(this)
+                val skin = SkinRepository.findSkin(this, data.selectedCharacterSkinId)
+                val finished = skin == null || FrameAnimationController.isOneShotFinished(
+                    skin, data.state, data.stateEnteredElapsed, now
+                )
+                if (!screenOn || finished) stopCleanly() else scheduleNextIfScreenOn()
+            }
         }
     }
 

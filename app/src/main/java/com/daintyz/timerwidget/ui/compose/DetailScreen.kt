@@ -1,7 +1,9 @@
 package com.daintyz.timerwidget.ui.compose
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -67,11 +69,6 @@ import kotlin.math.absoluteValue
 /** prevNN 미리보기 최대 탐침 수 (디자인레포 규칙상 prev01부터 연속, 첫 결번에서 중단). */
 private const val MAX_PREVIEWS = 30
 
-/** 보유 미리보기에서 스와이프할 상태 순서. */
-private val PREVIEW_STATES = listOf(
-    TimerState.IDLE, TimerState.RUNNING, TimerState.PAUSED, TimerState.COMPLETE
-)
-
 @Composable
 private fun stateLabel(state: TimerState): String = stringResource(
     when (state) {
@@ -83,12 +80,14 @@ private fun stateLabel(state: TimerState): String = stringResource(
 )
 
 /**
- * 테마 상세/미리보기 화면 (Compose 커버플로우 캐러셀).
+ * 테마 상세/미리보기 화면.
  *
- * - 보유: character_zip 프레임으로 정지/진행 중/중단/완료를 스와이프(페이지네이션 자리에 상태명). 하단 = 적용하기/적용 중.
- * - 미보유: preview/{id}/prevNN.png를 스와이프(하단 = n/총). 하단 버튼 = 구매하기(가격) / (무료면 다운로드).
+ * - 보유: '실제 위젯'을 그대로 띄운 인터랙티브 미리보기(샌드박스). +/- · 시작/일시정지 · 정지를
+ *   직접 눌러 카운트다운/애니메이션을 그 자리에서 체험한다(실제 홈 위젯/타이머 상태엔 영향 없음).
+ *   하단 캡션 = 현재 상태명, 하단 버튼 = 적용하기/적용 중.
+ * - 미보유: preview/{id}/prevNN.png 캐러셀(하단 = n/총). 하단 버튼 = 구매하기(가격) / (무료면 다운로드).
  *
- * 다운로드로 보유 전환되면 그 자리에서 상태 스와이프 모드로 바뀐다.
+ * 다운로드로 보유 전환되면 그 자리에서 인터랙티브 미리보기로 바뀐다.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -166,33 +165,50 @@ fun DetailScreen(
         )
 
         val localSkin = skin
-        val pageCount = if (owned) PREVIEW_STATES.size else previews.size.coerceAtLeast(1)
-        val pagerState = rememberPagerState(pageCount = { pageCount })
-
-        // 커버플로우 캐러셀.
-        HorizontalPager(
-            state = pagerState,
-            contentPadding = PaddingValues(horizontal = 52.dp),
-            pageSpacing = 0.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-                .aspectRatio(10f / 9f),
-        ) { page ->
-            val isFocused = page == pagerState.currentPage
-            CoverFlowBox(pagerState = pagerState, page = page) {
+        if (owned && localSkin != null) {
+            // 보유: '실제 위젯 작동' 인터랙티브 미리보기(샌드박스). 캐러셀 대신 단일 위젯을 띄운다.
+            val previewState = remember(skinId) { mutableStateOf(initialPreviewData(context, skinId)) }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .aspectRatio(10f / 9f),
+                contentAlignment = Alignment.Center,
+            ) {
                 DetailCard {
-                    when {
-                        owned && localSkin != null -> WidgetStatePreview(
-                            // 캐릭터만이 아니라 '실제 위젯 전체'(타이머+캐릭터)를 같은 RemoteViews 코드로 렌더한다.
-                            // 타이머 위치(위/아래)는 현재 설정(layoutMode)을 따르고, 폰트/버튼도 위젯과 100% 일치한다.
-                            skinId = skinId,
-                            state = PREVIEW_STATES[page],
-                            isFocused = isFocused,
-                            // 실제 2x2 위젯과 같은 정사각 비율로 렌더(미리보기=위젯 종횡비 일치).
-                            modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-                        )
-                        !owned -> BitmapImage(
+                    InteractiveWidgetPreview(
+                        // 캐릭터만이 아니라 '실제 위젯 전체'(타이머+캐릭터)를 같은 RemoteViews 코드로 렌더한다.
+                        // 타이머 위치(위/아래)는 현재 설정(layoutMode)을 따르고, 폰트/버튼도 위젯과 100% 일치한다.
+                        state = previewState,
+                        // 실제 2x2 위젯과 같은 정사각 비율로 렌더(미리보기=위젯 종횡비 일치).
+                        modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+                    )
+                }
+            }
+            // 캡션 = 미리보기 위젯의 현재 상태명(조작에 따라 실시간 갱신).
+            Text(
+                text = stateLabel(previewState.value.state),
+                color = AppColors.OnSurface,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 14.dp),
+            )
+        } else {
+            // 미보유: prevNN 홍보 이미지 커버플로우 캐러셀(정적).
+            val pageCount = previews.size.coerceAtLeast(1)
+            val pagerState = rememberPagerState(pageCount = { pageCount })
+            HorizontalPager(
+                state = pagerState,
+                contentPadding = PaddingValues(horizontal = 52.dp),
+                pageSpacing = 0.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .aspectRatio(10f / 9f),
+            ) { page ->
+                CoverFlowBox(pagerState = pagerState, page = page) {
+                    DetailCard {
+                        BitmapImage(
                             bitmap = previews.getOrNull(page),
                             contentDescription = name,
                             modifier = Modifier.fillMaxSize().padding(14.dp),
@@ -201,21 +217,19 @@ fun DetailScreen(
                     }
                 }
             }
+            val caption = if (previews.isEmpty()) {
+                stringResource(R.string.detail_preview_empty)
+            } else {
+                stringResource(R.string.vault_position, pagerState.currentPage + 1, previews.size)
+            }
+            Text(
+                text = caption,
+                color = AppColors.Brown,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Normal,
+                modifier = Modifier.padding(top = 14.dp),
+            )
         }
-
-        // 페이지네이션 자리: 보유=상태명, 미보유=n/총.
-        val caption = when {
-            owned -> stateLabel(PREVIEW_STATES[pagerState.currentPage])
-            previews.isEmpty() -> stringResource(R.string.detail_preview_empty)
-            else -> stringResource(R.string.vault_position, pagerState.currentPage + 1, previews.size)
-        }
-        Text(
-            text = caption,
-            color = if (owned) AppColors.OnSurface else AppColors.Brown,
-            fontSize = if (owned) 18.sp else 15.sp,
-            fontWeight = if (owned) FontWeight.Bold else FontWeight.Normal,
-            modifier = Modifier.padding(top = 14.dp),
-        )
 
         Spacer(Modifier.weight(1f))
 
@@ -305,18 +319,17 @@ private fun DetailCard(content: @Composable () -> Unit) {
 }
 
 /**
- * 한 상태의 '실제 위젯'(타이머+캐릭터)을 RemoteViews로 라이브 렌더한다(옛 PreviewActivity의 Compose 이식).
- * 위젯과 동일한 [WidgetUpdater.buildRemoteViews] 경로를 그대로 쓰므로 폰트/버튼/타이머 위치가 위젯과 일치한다.
+ * '실제 위젯'(타이머+캐릭터)을 RemoteViews로 라이브 렌더하고, 위젯 버튼/시간영역에 **미리보기 전용 로컬
+ * 클릭 리스너**를 직접 달아 그 자리에서 조작 가능한 인터랙티브 미리보기(샌드박스)를 만든다.
  *
- * - 포커스 페이지: 100ms 틱으로 [android.widget.RemoteViews.reapply] → 캐릭터 애니메이션 + 타이머 카운트다운.
- * - 비포커스 페이지: 1회 apply 후 정지(부하 절약).
- * - forPreview=true 라 미리보기 안의 탭/버튼은 실제 타이머 상태를 건드리지 않는다.
+ * - 위젯과 동일한 [WidgetUpdater.buildRemoteViews] 경로(forPreview=true)를 그대로 써서 폰트/버튼/타이머 위치가 위젯과 100% 일치.
+ * - forPreview=true라 실제 PendingIntent가 바인딩되지 않으므로, [bindSandboxClicks]가 단 로컬 리스너만 동작 → 실제 타이머/홈 위젯엔 영향 없음.
+ * - 250ms마다 [android.widget.RemoteViews.reapply]로 제자리 갱신(뷰 재생성 없이 깜빡임 방지) → 카운트다운 + 캐릭터 애니메이션.
+ * - RUNNING 만료 시 미리보기 안에서 COMPLETE로 전환된다(완료 애니메이션 확인 가능).
  */
 @Composable
-private fun WidgetStatePreview(
-    skinId: String,
-    state: TimerState,
-    isFocused: Boolean,
+private fun InteractiveWidgetPreview(
+    state: androidx.compose.runtime.MutableState<TimerData>,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -325,70 +338,121 @@ private fun WidgetStatePreview(
 
     AndroidView(factory = { container }, modifier = modifier)
 
-    LaunchedEffect(skinId, state, isFocused) {
-        // RUNNING 종료 시각은 진입 시 1회 고정 — 매 틱 재계산하면 카운트다운이 줄지 않는다.
-        val runningEnd = SystemClock.elapsedRealtime() +
-            TimerPreferences.get(context).load().lastSetMinutes.coerceAtLeast(1) * 60_000L
-
+    LaunchedEffect(container) {
         fun build() = WidgetUpdater.buildRemoteViews(
-            context,
-            previewData(context, skinId, state, runningEnd),
-            SystemClock.elapsedRealtime(),
-            forPreview = true,
+            appCtx, state.value, SystemClock.elapsedRealtime(), forPreview = true,
         )
 
-        // 최초 1회 apply (이후 reapply로 제자리 갱신 → 뷰 재생성 없이 깜빡임 방지).
+        // 최초 1회 apply 후 로컬 클릭 리스너 바인딩(이후 reapply는 리스너를 지우지 않는다).
         val root = build().apply(appCtx, container)
         container.removeAllViews()
         root.layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
         )
         container.addView(root)
+        bindSandboxClicks(root, state)
 
-        if (isFocused) {
-            while (true) {
-                delay(100)
-                build().reapply(appCtx, root)
+        while (true) {
+            val now = SystemClock.elapsedRealtime()
+            val d = state.value
+            // 카운트다운이 0에 도달하면 미리보기 안에서 완료로 전환(완료 애니메이션 1회 재생).
+            if (d.state == TimerState.RUNNING && now >= d.targetEndElapsed) {
+                state.value = d.copy(
+                    state = TimerState.COMPLETE,
+                    stateEnteredElapsed = now,
+                    targetEndElapsed = 0L,
+                    remainingMillisAtPause = 0L,
+                )
             }
+            build().reapply(appCtx, root)
+            delay(100)
         }
     }
 }
 
 /**
- * 현재 적용중 설정(layoutMode 등)을 베이스로, 미리보는 캐릭터만 [skinId]로 치환하고 상태별 표본 시간을 채운
- * 미리보기용 스냅샷. 타이머 스킨은 이 스킨이 timer 블록을 가질 때만 함께 치환(없으면 현재 타이머 유지).
+ * 미리보기 위젯의 버튼/시간영역에 '미리보기 내부 전용' 로컬 클릭 리스너를 단다.
+ * 각 동작은 [TimerController]와 동일한 규칙으로 로컬 [state]만 전이시킨다(실제 타이머 prefs는 건드리지 않음).
  */
-private fun previewData(
-    context: android.content.Context,
-    skinId: String,
-    state: TimerState,
-    runningEndElapsed: Long,
-): TimerData {
-    val base = TimerPreferences.get(context).load()
-    val sampleMs = base.lastSetMinutes.coerceAtLeast(1) * 60_000L
-    val withState = when (state) {
-        TimerState.IDLE -> base.copy(state = TimerState.IDLE)
-        TimerState.RUNNING -> base.copy(
-            state = TimerState.RUNNING,
-            totalMillis = sampleMs,
-            targetEndElapsed = runningEndElapsed,
-            remainingMillisAtPause = 0L,
-        )
-        TimerState.PAUSED -> base.copy(
-            state = TimerState.PAUSED,
-            totalMillis = sampleMs,
-            remainingMillisAtPause = sampleMs / 2,
-        )
-        TimerState.COMPLETE -> base.copy(
-            state = TimerState.COMPLETE,
-            targetEndElapsed = 0L,
-            remainingMillisAtPause = 0L,
-        )
+private fun bindSandboxClicks(root: View, state: androidx.compose.runtime.MutableState<TimerData>) {
+    fun now() = SystemClock.elapsedRealtime()
+    root.findViewById<View?>(R.id.btn_minus)?.setOnClickListener { state.value = previewStep(state.value, -1) }
+    root.findViewById<View?>(R.id.btn_plus)?.setOnClickListener { state.value = previewStep(state.value, +1) }
+    root.findViewById<View?>(R.id.btn_start_pause)?.setOnClickListener { state.value = previewToggle(state.value, now()) }
+    root.findViewById<View?>(R.id.btn_stop_reset)?.setOnClickListener { state.value = previewStop(state.value, now()) }
+    root.findViewById<View?>(R.id.time_area)?.setOnClickListener {
+        val d = state.value
+        state.value = if (d.state == TimerState.COMPLETE) previewReset(d, now()) else previewToggle(d, now())
     }
+}
+
+// ---- 미리보기 로컬 상태 전이 (TimerController 규칙의 미리보기판) ----
+
+/** 정지 상태에서만 설정 시간 ±step. 1~999분으로 제한. */
+private fun previewStep(d: TimerData, steps: Int): TimerData {
+    if (d.state != TimerState.IDLE) return d
+    val next = (d.lastSetMinutes + steps * d.stepMinutes.coerceAtLeast(1)).coerceIn(1, 999)
+    return d.copy(lastSetMinutes = next)
+}
+
+/**
+ * 미리보기 데모 재생 길이(고정). 미리보기는 '실제 분 단위 타이머'가 아니라 동작 확인용이므로,
+ * 설정 시간과 무관하게 재생 즉시 5초로 카운트다운한다(진행→완료를 빠르게 확인).
+ */
+private const val PREVIEW_RUN_MS = 5_000L
+
+/** 시작/일시정지/재개 토글. */
+private fun previewToggle(d: TimerData, now: Long): TimerData = when (d.state) {
+    TimerState.IDLE -> d.copy(
+        state = TimerState.RUNNING,
+        stateEnteredElapsed = now,
+        targetEndElapsed = now + PREVIEW_RUN_MS,
+        totalMillis = PREVIEW_RUN_MS,
+        remainingMillisAtPause = 0L,
+    )
+    TimerState.RUNNING -> d.copy(
+        state = TimerState.PAUSED,
+        stateEnteredElapsed = now,
+        remainingMillisAtPause = (d.targetEndElapsed - now).coerceAtLeast(0L),
+    )
+    TimerState.PAUSED -> d.copy(
+        state = TimerState.RUNNING,
+        stateEnteredElapsed = now,
+        targetEndElapsed = now + d.remainingMillisAtPause,
+        remainingMillisAtPause = 0L,
+    )
+    TimerState.COMPLETE -> d
+}
+
+/** 진행/일시정지 → 정지(설정 시간 유지). */
+private fun previewStop(d: TimerData, now: Long): TimerData = d.copy(
+    state = TimerState.IDLE,
+    stateEnteredElapsed = now,
+    targetEndElapsed = 0L,
+    remainingMillisAtPause = 0L,
+    totalMillis = 0L,
+)
+
+/** 완료 → 정지 복귀. */
+private fun previewReset(d: TimerData, now: Long): TimerData =
+    d.copy(state = TimerState.IDLE, stateEnteredElapsed = now)
+
+/**
+ * 현재 적용중 설정(layoutMode/설정시간 등)을 베이스로, 미리보는 캐릭터만 [skinId]로 치환한 IDLE 초기 스냅샷.
+ * 타이머 스킨은 이 스킨이 timer 블록을 가질 때만 함께 치환(없으면 현재 타이머 유지).
+ * stateEnteredElapsed=now라 미리보기를 열면 stop(중지) 애니메이션이 1회 재생된 뒤 마지막 프레임에서 멈춘다.
+ */
+private fun initialPreviewData(context: Context, skinId: String): TimerData {
+    val base = TimerPreferences.get(context).load()
     val skin = SkinRepository.findSkin(context, skinId)
-    return withState.copy(
+    return base.copy(
+        state = TimerState.IDLE,
+        stateEnteredElapsed = SystemClock.elapsedRealtime(),
+        targetEndElapsed = 0L,
+        remainingMillisAtPause = 0L,
+        totalMillis = 0L,
         selectedCharacterSkinId = skinId,
-        selectedTimerSkinId = if (skin?.timer != null) skinId else withState.selectedTimerSkinId,
+        selectedTimerSkinId = if (skin?.timer != null) skinId else base.selectedTimerSkinId,
     )
 }
 

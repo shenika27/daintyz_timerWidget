@@ -57,6 +57,7 @@ object TimerController {
         TimerPreferences.get(context).save(
             data.copy(
                 state = TimerState.RUNNING,
+                stateEnteredElapsed = now,
                 targetEndElapsed = now + total,
                 totalMillis = total,
                 remainingMillisAtPause = 0L
@@ -70,10 +71,11 @@ object TimerController {
         val now = SystemClock.elapsedRealtime()
         val remaining = (data.targetEndElapsed - now).coerceAtLeast(0L)
         TimerPreferences.get(context).save(
-            data.copy(state = TimerState.PAUSED, remainingMillisAtPause = remaining)
+            data.copy(state = TimerState.PAUSED, stateEnteredElapsed = now, remainingMillisAtPause = remaining)
         )
-        // 일시정지는 카운트다운이 멈추므로 서비스 종료(시간은 prefs로 보존). 재생 시 재시작.
-        TimerForegroundService.stop(context)
+        // 카운트다운은 멈추지만 일시정지 애니메이션을 한 번 재생해야 하므로 서비스를 바로 끄지 않고 재동기화한다.
+        // 서비스는 애니메이션이 마지막 프레임에 도달하면 스스로 종료한다(TimerForegroundService.tick).
+        TimerForegroundService.resync(context)
         WidgetUpdater.updateAllWidgets(context)
     }
 
@@ -82,6 +84,7 @@ object TimerController {
         TimerPreferences.get(context).save(
             data.copy(
                 state = TimerState.RUNNING,
+                stateEnteredElapsed = now,
                 targetEndElapsed = now + data.remainingMillisAtPause,
                 remainingMillisAtPause = 0L
             )
@@ -98,12 +101,15 @@ object TimerController {
         TimerPreferences.get(context).save(
             data.copy(
                 state = TimerState.IDLE,
+                stateEnteredElapsed = SystemClock.elapsedRealtime(),
                 targetEndElapsed = 0L,
                 remainingMillisAtPause = 0L,
                 totalMillis = 0L
             )
         )
-        TimerForegroundService.stop(context)
+        // 정지 직후 stop 애니메이션을 한 번 재생해야 하므로 서비스를 바로 끄지 않고 재동기화한다.
+        // 서비스는 IDLE 애니메이션이 마지막 프레임에 도달하면 스스로 종료한다(TimerForegroundService.tick).
+        TimerForegroundService.resync(context)
         WidgetUpdater.updateAllWidgets(context)
     }
 
@@ -115,6 +121,7 @@ object TimerController {
         TimerPreferences.get(context).save(
             data.copy(
                 state = TimerState.COMPLETE,
+                stateEnteredElapsed = SystemClock.elapsedRealtime(),
                 targetEndElapsed = 0L,
                 remainingMillisAtPause = 0L
             )
@@ -128,9 +135,12 @@ object TimerController {
     fun resetFromComplete(context: Context) {
         val data = TimerPreferences.get(context).load()
         if (data.state != TimerState.COMPLETE) return
-        TimerPreferences.get(context).save(data.copy(state = TimerState.IDLE))
+        TimerPreferences.get(context).save(
+            data.copy(state = TimerState.IDLE, stateEnteredElapsed = SystemClock.elapsedRealtime())
+        )
         TimerNotifications.cancelComplete(context)
-        TimerForegroundService.stop(context)
+        // 완료 → 정지 복귀 시에도 stop 애니메이션을 한 번 재생(서비스가 끝나면 스스로 종료).
+        TimerForegroundService.resync(context)
         WidgetUpdater.updateAllWidgets(context)
     }
 

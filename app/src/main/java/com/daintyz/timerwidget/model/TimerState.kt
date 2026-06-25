@@ -33,6 +33,7 @@ enum class LayoutMode(val key: String) {
  * 타이머의 현재 스냅샷. SharedPreferences에서 읽어 복원되며, 앱↔위젯 동기화의 단일 원천이다.
  *
  * @param state 현재 상태 (Idle/Running/Paused/Complete)
+ * @param stateEnteredElapsed 현재 상태로 진입한 SystemClock.elapsedRealtime() 시각(ms). IDLE/COMPLETE의 일회성(루프 없는) 애니메이션 시작 기준점. 0이면 미상(휴식 프레임=마지막 프레임으로 간주).
  * @param targetEndElapsed RUNNING일 때 SystemClock.elapsedRealtime() 기준 목표 종료 시각(ms). 절전 모드에도 오차 없음.
  * @param remainingMillisAtPause PAUSED일 때 멈춘 남은 시간(ms).
  * @param totalMillis 현재 타이머의 전체 길이(ms). 진행률 계산용.
@@ -47,6 +48,7 @@ enum class LayoutMode(val key: String) {
 data class TimerData(
     val state: TimerState,
     val targetEndElapsed: Long,
+    val stateEnteredElapsed: Long = 0L,
     val remainingMillisAtPause: Long,
     val totalMillis: Long,
     val lastSetMinutes: Int,
