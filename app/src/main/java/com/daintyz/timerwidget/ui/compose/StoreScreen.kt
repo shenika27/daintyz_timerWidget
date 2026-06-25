@@ -28,12 +28,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -101,12 +103,33 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().background(AppColors.Background)) {
+        // 중앙 타이틀.
+        Text(
+            text = stringResource(R.string.store_title),
+            color = AppColors.TextPrimary,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+        )
+
+        // 목록 좌측상단 작은 전체보기 토글.
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier
+                .padding(start = 16.dp, bottom = 2.dp)
+                .clickable { showAll = !showAll },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Checkbox(checked = showAll, onCheckedChange = { showAll = it })
-            Text(stringResource(R.string.store_show_all), color = AppColors.TextPrimary)
+            Checkbox(
+                checked = showAll,
+                onCheckedChange = { showAll = it },
+                modifier = Modifier.scale(0.75f),
+            )
+            Text(
+                text = stringResource(R.string.store_show_all),
+                color = AppColors.Brown,
+                fontSize = 12.sp,
+            )
         }
 
         LazyColumn(
