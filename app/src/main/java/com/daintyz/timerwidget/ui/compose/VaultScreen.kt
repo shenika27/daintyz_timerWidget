@@ -21,6 +21,12 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -41,8 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -304,13 +310,13 @@ private fun FilterRow(
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        FilterToggle(R.drawable.ic_money, stringResource(R.string.vault_owned_only), ownedOnly, onOwned)
-        FilterToggle(R.drawable.ic_star_outline, stringResource(R.string.vault_favorites), favOnly, onFav)
+        FilterToggle(Icons.Filled.Paid, stringResource(R.string.vault_owned_only), ownedOnly, onOwned)
+        FilterToggle(Icons.Filled.StarBorder, stringResource(R.string.vault_favorites), favOnly, onFav)
     }
 }
 
 @Composable
-private fun FilterToggle(iconRes: Int, contentDescription: String, selected: Boolean, onClick: () -> Unit) {
+private fun FilterToggle(icon: ImageVector, contentDescription: String, selected: Boolean, onClick: () -> Unit) {
     val bg = if (selected) AppColors.Primary else AppColors.Surface
     val fg = if (selected) AppColors.OnPrimary else AppColors.Brown
     Box(
@@ -323,7 +329,7 @@ private fun FilterToggle(iconRes: Int, contentDescription: String, selected: Boo
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            painter = painterResource(iconRes),
+            imageVector = icon,
             contentDescription = contentDescription,
             tint = fg,
             modifier = Modifier.size(20.dp),
@@ -339,8 +345,6 @@ private fun VaultCard(
     applied: Boolean,
     onToggleStar: () -> Unit,
 ) {
-    val context = LocalContext.current
-
     Box(modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 12.dp)) {
         // 카드.
         Box(
@@ -378,7 +382,7 @@ private fun VaultCard(
             if (!item.owned) {
                 Box(Modifier.fillMaxSize().background(AppColors.Dim))
                 Icon(
-                    painter = painterResource(R.drawable.ic_lock),
+                    imageVector = Icons.Filled.Lock,
                     contentDescription = stringResource(R.string.cd_locked),
                     tint = AppColors.OnPrimary,
                     modifier = Modifier.size(52.dp),
@@ -450,9 +454,7 @@ private fun StarToggle(favorited: Boolean, onClick: () -> Unit, modifier: Modifi
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            painter = painterResource(
-                if (favorited) R.drawable.ic_star_filled else R.drawable.ic_star_outline
-            ),
+            imageVector = if (favorited) Icons.Filled.Star else Icons.Filled.StarBorder,
             contentDescription = stringResource(R.string.cd_favorite),
             tint = if (favorited) AppColors.Primary else AppColors.Brown,
             modifier = Modifier
@@ -570,7 +572,7 @@ private fun ActionButtons(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 2.dp),
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_search),
+            imageVector = Icons.Filled.Search,
             contentDescription = null,
             tint = AppColors.Brown,
             modifier = Modifier.size(18.dp),

@@ -1,7 +1,6 @@
 package com.daintyz.timerwidget.ui.compose
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
@@ -26,6 +25,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -44,7 +45,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
@@ -111,18 +111,18 @@ fun DetailScreen(
         mutableStateOf(TimerPreferences.get(context).load().selectedCharacterSkinId == skinId)
     }
 
-    // 미보유: prevNN 이미지를 앞에서부터 순차 탐침해 채운다(첫 결번에서 중단).
-    val previews = remember { mutableStateListOf<Bitmap>() }
+    // 미보유: prevNN을 앞에서부터 순차 탐침(첫 결번에서 중단)해 '존재하는 URL'만 모은다. 표시는 Coil(RemoteImage).
+    val previews = remember { mutableStateListOf<String>() }
     var cancelled by remember { mutableStateOf(false) }
     DisposableEffect(skinId, owned) {
         cancelled = false
         if (!owned) {
             previews.clear()
-            val urls = (1..MAX_PREVIEWS).map { SkinRepoUrls.preview(skinId, it, previewBase) }
-            RemoteImageLoader.loadGallery(
-                urls = urls,
+            val candidates = (1..MAX_PREVIEWS).map { SkinRepoUrls.previewCandidates(skinId, it, previewBase) }
+            RemoteImageLoader.resolveGallery(
+                candidatesPerIndex = candidates,
                 isCancelled = { cancelled },
-            ) { _, bmp -> if (!cancelled) previews.add(bmp) }
+            ) { _, url -> if (!cancelled) previews.add(url) }
         }
         onDispose { cancelled = true }
     }
@@ -146,7 +146,7 @@ fun DetailScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_back),
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.cd_detail_back),
                     tint = AppColors.Brown,
                     modifier = Modifier.size(22.dp),
@@ -194,7 +194,7 @@ fun DetailScreen(
                 modifier = Modifier.padding(top = 14.dp),
             )
         } else {
-            // 미보유: prevNN 홍보 이미지 커버플로우 캐러셀(정적).
+            // 미보유: prevNN 홍보 이미지 커버플로우 캐러셀. Coil 렌더라 prevNN이 GIF/애니 WebP면 그대로 재생된다.
             val pageCount = previews.size.coerceAtLeast(1)
             val pagerState = rememberPagerState(pageCount = { pageCount })
             HorizontalPager(
@@ -208,12 +208,23 @@ fun DetailScreen(
             ) { page ->
                 CoverFlowBox(pagerState = pagerState, page = page) {
                     DetailCard {
-                        BitmapImage(
-                            bitmap = previews.getOrNull(page),
-                            contentDescription = name,
-                            modifier = Modifier.fillMaxSize().padding(14.dp),
-                            contentScale = ContentScale.Fit,
-                        )
+                        val url = previews.getOrNull(page)
+                        if (url != null) {
+                            RemoteImage(
+                                url = url,
+                                contentDescription = name,
+                                modifier = Modifier.fillMaxSize().padding(14.dp),
+                                contentScale = ContentScale.Fit,
+                            )
+                        } else {
+                            // 아직 탐침 전/빈 목록 → placeholder.
+                            BitmapImage(
+                                bitmap = null,
+                                contentDescription = name,
+                                modifier = Modifier.fillMaxSize().padding(14.dp),
+                                contentScale = ContentScale.Fit,
+                            )
+                        }
                     }
                 }
             }
