@@ -117,7 +117,7 @@
 <body>
 <header>
   <h1>🎨 캐릭터 타이머 스킨 빌더</h1>
-  <p>이미지를 상태별로 올리면 <code>skin.json</code> 구성 + 파일명 정리 + <code>{skinId}.zip</code> 패키징까지 자동으로 합니다. 코드 수정 없이 디자인레포에 올리면 상점에 노출돼요.</p>
+  <p>캐릭터·타이머·미리보기·catalog 정보를 모아 <b>번들 <code>{skinId}.zip</code></b> 하나로 만듭니다. 이 zip을 디자인레포 <code>_inbox/</code>에 업로드하면 GitHub Action이 자동으로 풀어 <code>character_zip/</code>·<code>preview/</code> 배치 + <code>catalog.json</code> 병합까지 해줍니다. 코드/복붙 작업 없음.</p>
 </header>
 
 <main>
@@ -214,12 +214,31 @@
     </div>
   </section>
 
+  <!-- 4. 미리보기 이미지 -->
+  <section class="card">
+    <h2>4. 미리보기 이미지</h2>
+    <p class="hint">상점/타이머 탭에 쓰일 이미지입니다. <b>썸네일은 필수</b>(상점 목록·타이머 탭 공용), 미리보기는 여러 장 올리면 상세화면 갤러리에 순서대로 표시됩니다. 올린 파일은 자동으로 PNG로 변환·명명됩니다(<code>thumb.png</code>, <code>prev01.png…</code>).</p>
+    <div class="grid">
+      <div class="state-card req">
+        <h3>썸네일 (thumb.png)</h3>
+        <p class="sub">상점 카드·타이머 탭에 뜨는 대표 1장.</p>
+        <div id="asset_thumb"></div>
+      </div>
+      <div class="state-card">
+        <h3>미리보기 갤러리 (prev01, prev02…)</h3>
+        <p class="sub">상세화면에서 넘겨 보는 이미지들. 없으면 갤러리 생략(썸네일만).</p>
+        <div class="drop" id="prevDrop">＋ 이미지 끌어다 놓기 / 클릭해서 선택 (여러 장 가능)</div>
+        <ul class="frames" id="frames_prev"></ul>
+      </div>
+    </div>
+  </section>
+
   <!-- catalog.json 줄 -->
   <section class="card">
-    <h2>4. catalog.json에 추가할 줄</h2>
-    <p class="hint">디자인레포 <code>catalog.json</code>의 <code>"skins"</code> 배열에 이 줄을 추가해야 상점에 노출됩니다. (이 줄을 안 넣으면 zip·preview를 올려도 안 뜸)</p>
+    <h2>5. catalog.json 항목 (자동 포함)</h2>
+    <p class="hint">아래 항목이 번들 안 <code>catalog_entry.json</code>으로 들어가고, Action이 <code>catalog.json</code>의 <code>"skins"</code> 배열에 자동 추가/갱신합니다. 손으로 복붙할 필요는 없어요(아래 복사 버튼은 확인·수동 보정용).</p>
     <pre class="preview-json" id="catalogSnippet" style="max-height:none">기본 정보를 입력하세요.</pre>
-    <button class="pick" id="copyCatalog" type="button" style="margin-top:10px">📋 이 줄 복사</button>
+    <button class="pick" id="copyCatalog" type="button" style="margin-top:10px">📋 이 줄 복사(선택)</button>
     <span id="copyMsg" style="margin-left:10px;font-size:12.5px;color:var(--ok)"></span>
   </section>
 
@@ -232,7 +251,7 @@
 
 <footer>
   <div class="status" id="status"></div>
-  <button class="btn-make" id="makeBtn">⬇ character.zip 만들기</button>
+  <button class="btn-make" id="makeBtn">⬇ 번들 zip 만들기</button>
 </footer>
 
 <script>
@@ -255,6 +274,9 @@ const store = {};
 STATES.forEach(s => store[s.key] = { frames: [], dur: s.defDur, pingpong: false });
 // 단일 에셋 저장소: background, minus.., font
 const assets = {};
+// 미리보기 저장소: thumb(단일) + prev 프레임 배열
+let previewThumb = null;            // { file, url } | null
+const previewFrames = [];           // [{ id, file, url }]
 
 let frameSeq = 0;
 
@@ -387,6 +409,107 @@ function outNameFor(slotId, file) {
   return `btn_${slotId}.${extOf(file.name, "png")}`; // minus/plus/play/pause/stop
 }
 
+/* ---------- 미리보기(썸네일 + prev 갤러리) ---------- */
+function buildThumbSlot() {
+  const host = document.getElementById("asset_thumb");
+  const input = document.createElement("input");
+  input.type = "file"; input.accept = "image/*"; input.style.display = "none";
+  const view = document.createElement("div");
+  host.appendChild(view); host.appendChild(input);
+
+  function render() {
+    if (!previewThumb) {
+      view.innerHTML = `<div class="single-asset">
+        <div class="thumb" style="display:flex;align-items:center;justify-content:center;color:#c2c8d0;font-size:22px">＋</div>
+        <div class="meta"><b>썸네일</b>파일 없음 → thumb.png</div>
+        <button class="pick" type="button">파일 선택</button></div>`;
+      view.querySelector(".pick").onclick = () => input.click();
+      view.querySelector(".thumb").onclick = () => input.click();
+    } else {
+      view.innerHTML = `<div class="single-asset">
+        <img class="thumb" src="${previewThumb.url}">
+        <div class="meta"><b>썸네일</b><span>thumb.png</span></div>
+        <button class="clear-x" type="button" title="제거">✕</button></div>`;
+      view.querySelector(".clear-x").onclick = () => {
+        URL.revokeObjectURL(previewThumb.url); previewThumb = null; render(); refresh();
+      };
+    }
+  }
+  input.addEventListener("change", () => {
+    const f = input.files[0]; input.value = "";
+    if (!f) return;
+    if (previewThumb) URL.revokeObjectURL(previewThumb.url);
+    previewThumb = { file: f, url: URL.createObjectURL(f) };
+    render(); refresh();
+  });
+  render();
+}
+
+function buildPrevList() {
+  const drop = document.getElementById("prevDrop");
+  const input = document.createElement("input");
+  input.type = "file"; input.accept = "image/*"; input.multiple = true; input.style.display = "none";
+  drop.after(input);
+  drop.addEventListener("click", () => input.click());
+  input.addEventListener("change", () => { addPrev(input.files); input.value = ""; });
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); addPrev(e.dataTransfer.files); });
+}
+
+function addPrev(fileList) {
+  [...fileList].filter(f => f.type.startsWith("image/")).forEach(f => {
+    previewFrames.push({ id: ++frameSeq, file: f, url: URL.createObjectURL(f) });
+  });
+  renderPrev(); refresh();
+}
+
+function renderPrev() {
+  const ul = document.getElementById("frames_prev");
+  ul.innerHTML = "";
+  previewFrames.forEach((fr, i) => {
+    const name = `prev${pad2(i + 1)}.png`;
+    const li = document.createElement("li");
+    li.className = "frame";
+    li.innerHTML = `
+      <img src="${fr.url}" alt="">
+      <div class="nm" title="${name}">${name}</div>
+      <div class="ops">
+        <button data-act="up" title="앞으로">▲</button>
+        <button data-act="down" title="뒤로">▼</button>
+        <button data-act="del" class="del" title="삭제">✕</button>
+      </div>`;
+    li.querySelector('[data-act=up]').onclick = () => movePrev(i, -1);
+    li.querySelector('[data-act=down]').onclick = () => movePrev(i, 1);
+    li.querySelector('[data-act=del]').onclick = () => {
+      URL.revokeObjectURL(fr.url); previewFrames.splice(i, 1); renderPrev(); refresh();
+    };
+    ul.appendChild(li);
+  });
+}
+
+function movePrev(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= previewFrames.length) return;
+  [previewFrames[i], previewFrames[j]] = [previewFrames[j], previewFrames[i]];
+  renderPrev(); refresh();
+}
+
+// 업로드 이미지를 PNG Blob으로 재인코딩(확장자/포맷 무관하게 thumb.png/prevNN.png 보장).
+function toPngBlob(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext("2d").drawImage(img, 0, 0);
+      c.toBlob(b => b ? resolve(b) : reject(new Error("PNG 변환 실패")), "image/png");
+    };
+    img.onerror = () => reject(new Error("이미지 로드 실패: " + file.name));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 /* ---------- 검증 + skin.json 생성 ---------- */
 function buildSkinJson() {
   const skinId = document.getElementById("skinId").value.trim();
@@ -418,6 +541,7 @@ function buildSkinJson() {
   STATES.filter(s => s.req).forEach(s => {
     if (!store[s.key].frames.length) errors.push(`'${s.title}' 상태 이미지를 1장 이상 올리세요.`);
   });
+  if (!previewThumb) errors.push("미리보기 썸네일(thumb)을 올리세요. 상점·타이머 탭에 필수입니다.");
 
   const character = {
     stop: frameSet("stop"),
@@ -467,6 +591,18 @@ function buildSkinJson() {
   return { json, errors, skinId, price, prestige, description, createdAt };
 }
 
+// catalog.json "skins" 배열에 들어갈 항목. 번들의 catalog_entry.json + 화면 스니펫 공용.
+function buildCatalogEntry() {
+  const { json, skinId, price, prestige, description, createdAt } = buildSkinJson();
+  if (!skinId || !json.name) return null;
+  return {
+    skinId, name: json.name, price, prestige,
+    ...(description ? { description } : {}),
+    ...(createdAt ? { createdAt } : {}),
+    version: 1, // Action이 갱신(기존 스킨 재업로드 시 +1)
+  };
+}
+
 /* ---------- 미리보기 + 상태 ---------- */
 function refresh() {
   const { json, errors, skinId, price, prestige, description, createdAt } = buildSkinJson();
@@ -476,19 +612,12 @@ function refresh() {
   document.getElementById("priceHint").textContent =
     price <= 0 ? "→ 무료 테마" : `→ ${price.toLocaleString()}원`;
 
-  // catalog.json 줄
+  // catalog.json 항목 (번들에 자동 포함)
   const snip = document.getElementById("catalogSnippet");
-  if (skinId && json.name) {
-    const line = {
-      skinId, name: json.name, price, prestige,
-      ...(description ? { description } : {}),
-      ...(createdAt ? { createdAt } : {}),
-      version: 1,
-    };
-    snip.textContent = JSON.stringify(line).replace(/,/g, ", ").replace(/:/g, ": ");
-  } else {
-    snip.textContent = "skinId와 이름을 입력하세요.";
-  }
+  const entry = buildCatalogEntry();
+  snip.textContent = entry
+    ? JSON.stringify(entry).replace(/,/g, ", ").replace(/:/g, ": ")
+    : "skinId와 이름을 입력하세요.";
 
   const status = document.getElementById("status");
   const btn = document.getElementById("makeBtn");
@@ -501,38 +630,63 @@ function refresh() {
   }
 }
 
-/* ---------- zip 생성 ---------- */
+// 앱이 받는 캐릭터 zip(내부에 {skinId}/ 래퍼 + skin.json). 번들 안에 그대로 중첩된다.
+async function buildCharacterZipBlob(json, skinId) {
+  const zip = new JSZip();
+  const root = zip.folder(skinId); // 앱이 공통 루트 폴더를 자동으로 벗겨냄
+  root.file("skin.json", JSON.stringify(json, null, 2));
+  for (const s of STATES) {
+    store[s.key].frames.forEach((fr, i) => {
+      root.file(`${s.key}_${pad2(i + 1)}.${extOf(fr.file.name, "png")}`, fr.file);
+    });
+  }
+  if (assets.background) root.file(assets.background.outName, assets.background.file);
+  BUTTONS.forEach(b => { if (assets[b.key]) root.file(assets[b.key].outName, assets[b.key].file); });
+  if (assets.font) root.file(assets.font.outName, assets.font.file);
+  return zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+}
+
+/* ---------- 번들 zip 생성 (디자인레포 _inbox/ 업로드용) ----------
+   구조 = 디자인레포 레이아웃 오버레이:
+     character_zip/{skinId}.zip   ← 위 캐릭터 zip 그대로
+     preview/{skinId}/thumb.png
+     preview/{skinId}/prev01.png …
+     catalog_entry.json           ← catalog.json "skins"에 병합할 항목
+   Action(apply-skin-bundle)이 이 구조를 그대로 레포에 펼치고 catalog만 병합한다. */
 async function makeZip() {
   const { json, errors, skinId } = buildSkinJson();
   if (errors.length) { alert("아직 다음 문제가 있어요:\n\n- " + errors.join("\n- ")); return; }
 
-  const zip = new JSZip();
-  const root = zip.folder(skinId); // 앱이 공통 루트 폴더를 자동으로 벗겨냄
-
-  // skin.json
-  root.file("skin.json", JSON.stringify(json, null, 2));
-
-  // 캐릭터 프레임 (재명명)
-  for (const s of STATES) {
-    store[s.key].frames.forEach((fr, i) => {
-      const nm = `${s.key}_${pad2(i + 1)}.${extOf(fr.file.name, "png")}`;
-      root.file(nm, fr.file);
-    });
-  }
-  // 타이머 에셋
-  if (assets.background) root.file(assets.background.outName, assets.background.file);
-  BUTTONS.forEach(b => { if (assets[b.key]) root.file(assets[b.key].outName, assets[b.key].file); });
-  if (assets.font) root.file(assets.font.outName, assets.font.file);
-
   const btn = document.getElementById("makeBtn");
   btn.disabled = true; btn.textContent = "압축 중…";
-  const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${skinId}.zip`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  btn.textContent = "⬇ character.zip 만들기"; btn.disabled = false;
+  try {
+    const bundle = new JSZip();
+
+    // 1) 캐릭터 zip 중첩
+    const charBlob = await buildCharacterZipBlob(json, skinId);
+    bundle.file(`character_zip/${skinId}.zip`, charBlob);
+
+    // 2) 미리보기 (PNG로 재인코딩)
+    const prevDir = bundle.folder(`preview/${skinId}`);
+    prevDir.file("thumb.png", await toPngBlob(previewThumb.file));
+    for (let i = 0; i < previewFrames.length; i++) {
+      prevDir.file(`prev${pad2(i + 1)}.png`, await toPngBlob(previewFrames[i].file));
+    }
+
+    // 3) catalog 병합용 항목
+    bundle.file("catalog_entry.json", JSON.stringify(buildCatalogEntry(), null, 2));
+
+    const blob = await bundle.generateAsync({ type: "blob", compression: "DEFLATE" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${skinId}.zip`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) {
+    alert("번들 생성 중 오류: " + e.message);
+  } finally {
+    btn.textContent = "⬇ 번들 zip 만들기"; btn.disabled = false;
+  }
 }
 
 /* ---------- init ---------- */
@@ -540,6 +694,8 @@ buildStateCards();
 buildAssetSlot("background", "타이머 배경", "image/*");
 BUTTONS.forEach(b => buildAssetSlot(b.key, b.label, "image/*"));
 buildAssetSlot("font", "숫자 폰트(.ttf)", ".ttf,font/ttf,application/octet-stream");
+buildThumbSlot();
+buildPrevList();
 
 // 출시일 기본값 = 오늘(로컬 기준 yyyy-mm-dd). 새 스킨은 보통 만든 날 출시.
 (() => {
