@@ -25,7 +25,6 @@ import com.daintyz.timerwidget.model.TimerState
 import com.daintyz.timerwidget.receiver.TimerActionReceiver
 import com.daintyz.timerwidget.skin.FrameAnimationController
 import com.daintyz.timerwidget.skin.SkinRepository
-import com.daintyz.timerwidget.ui.MainActivity
 
 /**
  * RemoteViews 생성/갱신 로직의 단일 진입점 (설계 문서 2-1, 4-3).
@@ -292,18 +291,13 @@ object WidgetUpdater {
     // ---- 캐릭터 클릭 ----
 
     private fun applyCharacterClick(context: Context, views: RemoteViews, state: TimerState) {
-        val pending = if (state == TimerState.COMPLETE) {
-            // 완료 상태: 탭하면 정지(Idle)로 복귀 (직전 설정 시간 유지)
-            broadcast(context, TimerActionReceiver.ACTION_TAP_COMPLETE)
+        // 캐릭터 단일 탭: 완료면 정지(Idle) 복귀, 그 외엔 재생/일시정지 토글(시간 영역 탭과 동일).
+        // 위젯(RemoteViews)은 더블탭/제스처를 지원하지 않아 단일 탭 동작만 둔다. 앱은 런처 아이콘으로 진입.
+        val action = if (state == TimerState.COMPLETE) {
+            TimerActionReceiver.ACTION_TAP_COMPLETE
         } else {
-            // 그 외: 앱 열기
-            val intent = Intent(context, MainActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            PendingIntent.getActivity(
-                context, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            TimerActionReceiver.ACTION_START_PAUSE
         }
-        views.setOnClickPendingIntent(R.id.iv_character, pending)
+        views.setOnClickPendingIntent(R.id.iv_character, broadcast(context, action))
     }
 }

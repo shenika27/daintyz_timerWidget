@@ -36,6 +36,16 @@
             android:name=".ui.DetailActivity"
             android:exported="false" />
 
+        <!-- 위젯 재구성(설정) 진입: 꾹 누름 → 관리화면의 설정 버튼 → 앱 설정 탭 -->
+        <activity
+            android:name=".ui.WidgetConfigureActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- 위젯 Provider -->
         <receiver
             android:name=".widget.CharacterTimerWidgetProvider"

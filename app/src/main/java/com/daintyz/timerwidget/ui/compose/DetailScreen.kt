@@ -444,17 +444,21 @@ private fun bindSandboxClicks(root: View, state: androidx.compose.runtime.Mutabl
 
 // ---- 미리보기 로컬 상태 전이 (TimerController 규칙의 미리보기판) ----
 
-/** 정지 상태에서만 설정 시간 ±step. 1분 이하는 10초 단위로 감소하며, 10초~999분으로 제한. */
+/**
+ * 정지 상태에서만 설정 시간 ±step (TimerController 규칙의 미리보기판).
+ * 1분 미만은 10초 단위. 1분 이상은 step(초) 배수 격자로 스냅. 10초~999분으로 제한.
+ */
 private fun previewStep(d: TimerData, steps: Int): TimerData {
     if (d.state != TimerState.IDLE) return d
-    val stepSeconds = d.stepMinutes.coerceAtLeast(1) * 60
-    val delta = when {
-        steps < 0 && d.lastSetSeconds <= 60 -> -10
-        steps > 0 && d.lastSetSeconds < 60 -> 10
-        else -> steps * stepSeconds
+    val step = d.stepSeconds.coerceAtLeast(5)
+    val cur = d.lastSetSeconds
+    val next = when {
+        steps > 0 && cur < 60 -> cur + 10
+        steps < 0 && cur <= 60 -> cur - 10
+        steps > 0 -> ((cur / step) + 1) * step // 다음 배수로 올림 스냅
+        else -> (((cur - 1) / step) * step).let { if (it < 60) 60 else it } // 이전 배수, 1분 미만은 1:00에 멈춤
     }
-    val next = (d.lastSetSeconds + delta).coerceIn(10, 999 * 60)
-    return d.copy(lastSetSeconds = next)
+    return d.copy(lastSetSeconds = next.coerceIn(10, 999 * 60))
 }
 
 /**
