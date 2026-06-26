@@ -18,23 +18,38 @@ import com.daintyz.timerwidget.widget.WidgetUpdater
  */
 object TimerController {
 
-    private const val MAX_MINUTES = 999
-    private const val MIN_MINUTES = 1
+    private const val MAX_SECONDS = 999 * 60
+    private const val MIN_SECONDS = 10
+    private const val ONE_MINUTE_SECONDS = 60
+    private const val SUB_MINUTE_STEP_SECONDS = 10
 
     // ---- 정지 상태에서 시간 증감 ----
 
-    fun increment(context: Context) = mutateIdleMinutes(context) { it + currentStep(context) }
-    fun decrement(context: Context) = mutateIdleMinutes(context) { it - currentStep(context) }
+    fun increment(context: Context) = mutateIdleSeconds(context) { currentSeconds ->
+        if (currentSeconds < ONE_MINUTE_SECONDS) {
+            currentSeconds + SUB_MINUTE_STEP_SECONDS
+        } else {
+            currentSeconds + currentStepSeconds(context)
+        }
+    }
 
-    private fun currentStep(context: Context): Int =
-        TimerPreferences.get(context).load().stepMinutes.coerceAtLeast(1)
+    fun decrement(context: Context) = mutateIdleSeconds(context) { currentSeconds ->
+        if (currentSeconds <= ONE_MINUTE_SECONDS) {
+            currentSeconds - SUB_MINUTE_STEP_SECONDS
+        } else {
+            currentSeconds - currentStepSeconds(context)
+        }
+    }
 
-    private inline fun mutateIdleMinutes(context: Context, delta: (Int) -> Int) {
+    private fun currentStepSeconds(context: Context): Int =
+        TimerPreferences.get(context).load().stepMinutes.coerceAtLeast(1) * ONE_MINUTE_SECONDS
+
+    private inline fun mutateIdleSeconds(context: Context, delta: (Int) -> Int) {
         val prefs = TimerPreferences.get(context)
         val data = prefs.load()
         if (data.state != TimerState.IDLE) return // 증감은 정지 상태에서만
-        val next = delta(data.lastSetMinutes).coerceIn(MIN_MINUTES, MAX_MINUTES)
-        prefs.save(data.copy(lastSetMinutes = next))
+        val next = delta(data.lastSetSeconds).coerceIn(MIN_SECONDS, MAX_SECONDS)
+        prefs.save(data.copy(lastSetSeconds = next))
         WidgetUpdater.updateAllWidgets(context)
     }
 
@@ -51,7 +66,7 @@ object TimerController {
     }
 
     private fun start(context: Context, data: TimerData) {
-        val total = data.lastSetMinutes * 60_000L
+        val total = data.lastSetSeconds * 1_000L
         if (total <= 0L) return
         val now = SystemClock.elapsedRealtime()
         TimerPreferences.get(context).save(
@@ -95,7 +110,7 @@ object TimerController {
 
     // ---- 중단/리셋 ----
 
-    /** 진행/일시정지 → 정지(Idle). 직전 설정 시간(lastSetMinutes)은 유지 (설계 문서 3-2). */
+    /** 진행/일시정지 → 정지(Idle). 직전 설정 시간(lastSetSeconds)은 유지 (설계 문서 3-2). */
     fun stopReset(context: Context) {
         val data = TimerPreferences.get(context).load()
         TimerPreferences.get(context).save(

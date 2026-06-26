@@ -12,7 +12,7 @@ import com.daintyz.timerwidget.widget.WidgetUpdater
  *
  * 주의: elapsedRealtime()은 재부팅 시 0으로 리셋되므로, 재부팅을 가로지른 RUNNING의
  * 목표 종료 시각은 더 이상 유효하지 않다. 1차 버전에서는 안전하게 정지(Idle)로 복구하되
- * 직전 설정 시간(lastSetMinutes)은 유지한다. (완료 상태였다면 완료 표시 유지)
+ * 직전 설정 시간(lastSetSeconds)은 유지한다. (완료 상태였다면 완료 표시 유지)
  */
 class BootCompletedReceiver : BroadcastReceiver() {
 

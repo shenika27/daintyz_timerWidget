@@ -12,7 +12,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -135,12 +134,17 @@ fun DetailScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // 상단 바: 뒤로 버튼만(좌측). 보유목록(FilterRow) 자리에 대응.
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        // 테마 이름 — 보유목록과 동일 위치/스타일(캐러셀 위 중앙, 24sp).
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center,
         ) {
             Box(
                 modifier = Modifier
+                    .align(Alignment.CenterStart)
                     .size(40.dp)
                     .clip(CircleShape)
                     .clickable { onBack() },
@@ -153,17 +157,15 @@ fun DetailScreen(
                     modifier = Modifier.size(22.dp),
                 )
             }
+            Text(
+                text = name,
+                color = AppColors.OnSurface,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 48.dp),
+            )
         }
-
-        // 테마 이름 — 보유목록과 동일 위치/스타일(캐러셀 위 중앙, 24sp).
-        Text(
-            text = name,
-            color = AppColors.OnSurface,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 16.dp),
-        )
 
         val localSkin = skin
         if (owned && localSkin != null) {
@@ -402,11 +404,17 @@ private fun bindSandboxClicks(root: View, state: androidx.compose.runtime.Mutabl
 
 // ---- 미리보기 로컬 상태 전이 (TimerController 규칙의 미리보기판) ----
 
-/** 정지 상태에서만 설정 시간 ±step. 1~999분으로 제한. */
+/** 정지 상태에서만 설정 시간 ±step. 1분 이하는 10초 단위로 감소하며, 10초~999분으로 제한. */
 private fun previewStep(d: TimerData, steps: Int): TimerData {
     if (d.state != TimerState.IDLE) return d
-    val next = (d.lastSetMinutes + steps * d.stepMinutes.coerceAtLeast(1)).coerceIn(1, 999)
-    return d.copy(lastSetMinutes = next)
+    val stepSeconds = d.stepMinutes.coerceAtLeast(1) * 60
+    val delta = when {
+        steps < 0 && d.lastSetSeconds <= 60 -> -10
+        steps > 0 && d.lastSetSeconds < 60 -> 10
+        else -> steps * stepSeconds
+    }
+    val next = (d.lastSetSeconds + delta).coerceIn(10, 999 * 60)
+    return d.copy(lastSetSeconds = next)
 }
 
 /**
@@ -465,6 +473,7 @@ private fun initialPreviewData(context: Context, skinId: String): TimerData {
         targetEndElapsed = 0L,
         remainingMillisAtPause = 0L,
         totalMillis = 0L,
+        lastSetSeconds = 10,
         selectedCharacterSkinId = skinId,
         selectedTimerSkinId = if (skin?.timer != null) skinId else base.selectedTimerSkinId,
     )

@@ -22,7 +22,12 @@ class TimerPreferences private constructor(context: Context) {
         stateEnteredElapsed = prefs.getLong(KEY_STATE_ENTERED_ELAPSED, 0L),
         remainingMillisAtPause = prefs.getLong(KEY_REMAINING_AT_PAUSE, 0L),
         totalMillis = prefs.getLong(KEY_TOTAL_MILLIS, 0L),
-        lastSetMinutes = prefs.getInt(KEY_LAST_SET_MINUTES, DEFAULT_MINUTES),
+        // 초 단위 키가 없는 기존 설치본은 기존 분 단위 값을 초로 변환해 유지한다.
+        lastSetSeconds = if (prefs.contains(KEY_LAST_SET_SECONDS)) {
+            prefs.getInt(KEY_LAST_SET_SECONDS, DEFAULT_SECONDS)
+        } else {
+            prefs.getInt(KEY_LAST_SET_MINUTES, DEFAULT_MINUTES) * SECONDS_PER_MINUTE
+        },
         stepMinutes = prefs.getInt(KEY_STEP_MINUTES, DEFAULT_STEP_MINUTES),
         layoutMode = LayoutMode.fromKey(prefs.getString(KEY_LAYOUT_MODE, null)),
         // 캐릭터/타이머 독립 선택. 구버전(단일 selected_skin_id)에서 올라온 경우 그 값을 양쪽에 복사해 마이그레이션.
@@ -43,7 +48,7 @@ class TimerPreferences private constructor(context: Context) {
             putLong(KEY_STATE_ENTERED_ELAPSED, data.stateEnteredElapsed)
             putLong(KEY_REMAINING_AT_PAUSE, data.remainingMillisAtPause)
             putLong(KEY_TOTAL_MILLIS, data.totalMillis)
-            putInt(KEY_LAST_SET_MINUTES, data.lastSetMinutes)
+            putInt(KEY_LAST_SET_SECONDS, data.lastSetSeconds)
             putInt(KEY_STEP_MINUTES, data.stepMinutes)
             putString(KEY_LAYOUT_MODE, data.layoutMode.key)
             putString(KEY_SELECTED_CHARACTER_SKIN_ID, data.selectedCharacterSkinId)
@@ -80,7 +85,10 @@ class TimerPreferences private constructor(context: Context) {
     companion object {
         private const val PREFS_NAME = "timer_widget_prefs"
 
+        private const val SECONDS_PER_MINUTE = 60
+
         const val DEFAULT_MINUTES = 10
+        const val DEFAULT_SECONDS = DEFAULT_MINUTES * SECONDS_PER_MINUTE
         const val DEFAULT_STEP_MINUTES = 1
         const val DEFAULT_SKIN_ID = "potato"
 
@@ -90,6 +98,7 @@ class TimerPreferences private constructor(context: Context) {
         private const val KEY_REMAINING_AT_PAUSE = "remaining_at_pause"
         private const val KEY_TOTAL_MILLIS = "total_millis"
         private const val KEY_LAST_SET_MINUTES = "last_set_minutes"
+        private const val KEY_LAST_SET_SECONDS = "last_set_seconds"
         private const val KEY_STEP_MINUTES = "step_minutes"
         private const val KEY_LAYOUT_MODE = "layout_mode"
         /** 구버전 단일 선택 키. 읽기 전용(마이그레이션 폴백)으로만 남겨둔다. */
