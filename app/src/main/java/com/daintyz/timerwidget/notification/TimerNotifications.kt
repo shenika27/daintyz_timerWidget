@@ -1,13 +1,16 @@
 package com.daintyz.timerwidget.notification
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import com.daintyz.timerwidget.R
 import com.daintyz.timerwidget.ui.MainActivity
@@ -64,6 +67,13 @@ object TimerNotifications {
     }
 
     fun notifyComplete(context: Context) {
+        // 알림 권한을 거부해도 완료 상태·위젯 갱신은 TimerController가 계속 처리한다.
+        // 여기서는 시스템 알림만 생략한다.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) return
+
         ensureChannels(context)
         val manager = context.getSystemService<NotificationManager>() ?: return
         val notification = NotificationCompat.Builder(context, CHANNEL_COMPLETE)
@@ -74,7 +84,7 @@ object TimerNotifications {
             .setContentIntent(openAppIntent(context))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
-        manager.notify(NOTIF_ID_COMPLETE, notification)
+        runCatching { manager.notify(NOTIF_ID_COMPLETE, notification) }
     }
 
     fun cancelComplete(context: Context) {

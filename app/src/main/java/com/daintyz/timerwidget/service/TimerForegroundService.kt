@@ -1,9 +1,11 @@
 package com.daintyz.timerwidget.service
 
+import android.Manifest
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Handler
@@ -156,10 +158,17 @@ class TimerForegroundService : Service() {
     }
 
     private fun updateForegroundNotification(text: String) {
+        // Android 13+에서 알림 권한이 거부되어도 타이머와 위젯은 계속 동작해야 한다.
+        // 이 경우 알림 갱신만 건너뛴다.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) return
+
         val notification = TimerNotifications.buildProgressNotification(this, text)
-        androidx.core.app.NotificationManagerCompat.from(this)
-            .takeIf { it.areNotificationsEnabled() }
-            ?.notify(TimerNotifications.NOTIF_ID_PROGRESS, notification)
+        val manager = androidx.core.app.NotificationManagerCompat.from(this)
+        if (!manager.areNotificationsEnabled()) return
+        runCatching { manager.notify(TimerNotifications.NOTIF_ID_PROGRESS, notification) }
     }
 
     private fun formatRemaining(millis: Long): String {
