@@ -36,8 +36,14 @@ object TimerNotifications {
         val complete = NotificationChannel(
             CHANNEL_COMPLETE,
             context.getString(R.string.notif_channel_complete_name),
-            NotificationManager.IMPORTANCE_HIGH // 완료는 눈에 띄게
-        ).apply { description = context.getString(R.string.notif_channel_complete_desc) }
+            NotificationManager.IMPORTANCE_HIGH // 완료는 눈에 띄게(헤드업), 단 소리·진동은 앱이 직접 제어
+        ).apply {
+            description = context.getString(R.string.notif_channel_complete_desc)
+            // 소리·진동은 CompletionFeedback이 인앱 토글에 따라 재생 → 채널은 무음·무진동(이중 재생 방지).
+            // 참고: 채널은 생성 후 변경 불가라 기존 설치본은 이전 설정이 남는다(신규 설치/재설치부터 적용).
+            setSound(null, null)
+            enableVibration(false)
+        }
 
         manager.createNotificationChannel(progress)
         manager.createNotificationChannel(complete)

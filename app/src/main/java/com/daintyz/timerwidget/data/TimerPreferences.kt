@@ -70,6 +70,20 @@ class TimerPreferences private constructor(context: Context) {
         prefs.edit().putStringSet(KEY_FAVORITE_SKIN_IDS, next).apply()
     }
 
+    // ---- 앱 전용 환경설정 (위젯 상태 동기화와 무관 — TimerData에 넣지 않는다) ----
+
+    /** 완료 시 앱이 알림음을 직접 재생할지. 기본 켜짐. */
+    fun isCompleteSoundEnabled(): Boolean = prefs.getBoolean(KEY_COMPLETE_SOUND, true)
+    fun setCompleteSoundEnabled(on: Boolean) = prefs.edit().putBoolean(KEY_COMPLETE_SOUND, on).apply()
+
+    /** 완료 시 앱이 진동할지. 기본 켜짐. */
+    fun isVibrateEnabled(): Boolean = prefs.getBoolean(KEY_VIBRATE, true)
+    fun setVibrateEnabled(on: Boolean) = prefs.edit().putBoolean(KEY_VIBRATE, on).apply()
+
+    /** 앱 UI에 시스템(폰) 글꼴을 쓸지. 기본 꺼짐(=내장 Gmarket/Jua). */
+    fun isUseSystemFont(): Boolean = prefs.getBoolean(KEY_USE_SYSTEM_FONT, false)
+    fun setUseSystemFont(on: Boolean) = prefs.edit().putBoolean(KEY_USE_SYSTEM_FONT, on).apply()
+
     /** 기프트코드 해금 등으로 보유 스킨을 추가한다(중복은 Set이 흡수). */
     fun addPurchasedSkinId(skinId: String) {
         update { it.copy(purchasedSkinIds = it.purchasedSkinIds + skinId) }
@@ -108,6 +122,9 @@ class TimerPreferences private constructor(context: Context) {
         private const val KEY_PURCHASED_SKIN_IDS = "purchased_skin_ids"
         private const val KEY_LIFETIME_PASS = "has_lifetime_pass"
         private const val KEY_FAVORITE_SKIN_IDS = "favorite_skin_ids"
+        private const val KEY_COMPLETE_SOUND = "complete_sound_enabled"
+        private const val KEY_VIBRATE = "vibrate_enabled"
+        private const val KEY_USE_SYSTEM_FONT = "use_system_font"
 
         @Volatile
         private var instance: TimerPreferences? = null

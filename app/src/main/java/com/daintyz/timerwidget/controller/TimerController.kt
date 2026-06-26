@@ -6,6 +6,7 @@ import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.LayoutMode
 import com.daintyz.timerwidget.model.TimerData
 import com.daintyz.timerwidget.model.TimerState
+import com.daintyz.timerwidget.notification.CompletionFeedback
 import com.daintyz.timerwidget.notification.TimerNotifications
 import com.daintyz.timerwidget.service.TimerForegroundService
 import com.daintyz.timerwidget.widget.WidgetUpdater
@@ -142,6 +143,7 @@ object TimerController {
             )
         )
         TimerNotifications.notifyComplete(context)
+        CompletionFeedback.fire(context) // 완료음·진동은 설정 토글에 따라 앱이 직접 재생
         WidgetUpdater.updateAllWidgets(context)
         // 서비스는 완료 승리 애니메이션을 위해 계속 유지 (탭 시 종료).
     }

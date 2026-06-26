@@ -6,7 +6,12 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.daintyz.timerwidget.data.TimerPreferences
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -81,10 +86,35 @@ val AppTypography = BaseTypography.copy(
     labelSmall = BaseTypography.labelSmall.appFont(GmarketSans, FontWeight.Medium),
 )
 
+/** 시스템(폰) 글꼴 — 사용자가 설정에서 선택 시. Material3 기본 타이포(FontFamily.Default). */
+private val SystemTypography = Typography()
+
+/**
+ * 앱 UI 글꼴 선택 상태. 설정 토글이 즉시 앱 전체에 반영되도록 관찰 가능한 전역 상태로 둔다.
+ * (위젯 타이머 숫자는 스킨이 정의하므로 이 선택과 무관 — 앱 화면에만 적용.)
+ */
+object AppFontState {
+    var useSystemFont by mutableStateOf(false)
+        private set
+
+    private var loaded = false
+
+    /** prefs에서 1회 초기 로드. */
+    fun ensureLoaded(load: () -> Boolean) {
+        if (!loaded) { useSystemFont = load(); loaded = true }
+    }
+
+    /** 설정 토글에서 호출 — 상태와 prefs를 함께 갱신해 앱 전체가 재구성된다. */
+    fun set(on: Boolean) { useSystemFont = on }
+}
+
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = LightScheme, typography = AppTypography) {
-        // 일반 Text는 본문 역할의 Gmarket Sans를 자동으로 상속한다.
+    val context = LocalContext.current
+    AppFontState.ensureLoaded { TimerPreferences.get(context).isUseSystemFont() }
+    val typography = if (AppFontState.useSystemFont) SystemTypography else AppTypography
+    MaterialTheme(colorScheme = LightScheme, typography = typography) {
+        // 일반 Text는 본문 역할(내장=Gmarket Sans / 시스템=기본)을 자동으로 상속한다.
         CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.bodyLarge) {
             content()
         }

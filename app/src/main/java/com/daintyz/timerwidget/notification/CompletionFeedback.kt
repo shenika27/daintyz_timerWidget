@@ -1,0 +1,46 @@
+package com.daintyz.timerwidget.notification
+
+import android.content.Context
+import android.media.RingtoneManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.core.content.getSystemService
+import com.daintyz.timerwidget.data.TimerPreferences
+
+/**
+ * 타이머 완료 시의 소리·진동 피드백.
+ *
+ * Android 8+에선 알림음·진동이 알림 채널에 묶여 생성 후 앱이 끌 수 없으므로,
+ * 완료 알림 채널은 무음·무진동으로 두고(이 신호는 [TimerNotifications] 채널 설정 참고)
+ * 여기서 앱이 직접 재생한다 — 설정의 인앱 토글로 실제 on/off가 가능해진다.
+ */
+object CompletionFeedback {
+
+    /** 설정 토글을 읽어 완료음·진동을 한 번씩 재생한다. */
+    fun fire(context: Context) {
+        val prefs = TimerPreferences.get(context)
+        if (prefs.isCompleteSoundEnabled()) playSound(context)
+        if (prefs.isVibrateEnabled()) vibrate(context)
+    }
+
+    /** 폰에 지정된 기본 알림음을 한 번 재생. 별도 음원 에셋 없이 시스템 알림음을 사용한다. */
+    private fun playSound(context: Context) {
+        runCatching {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            RingtoneManager.getRingtone(context.applicationContext, uri)?.play()
+        }
+    }
+
+    private fun vibrate(context: Context) {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context.getSystemService<VibratorManager>()?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService<Vibrator>()
+        } ?: return
+        if (!vibrator.hasVibrator()) return
+        vibrator.vibrate(VibrationEffect.createOneShot(400L, VibrationEffect.DEFAULT_AMPLITUDE))
+    }
+}

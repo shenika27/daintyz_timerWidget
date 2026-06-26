@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- 완료 시 앱이 직접 진동(알림 채널 대신 인앱 토글로 제어) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <!-- SCHEDULE_EXACT_ALARM은 선언하지 않음: 프레임은 핸들러 틱, 알람은 inexact 복구용 (설계 문서 4-1, 5장) -->
 
     <application
