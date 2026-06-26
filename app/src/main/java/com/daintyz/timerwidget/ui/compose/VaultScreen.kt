@@ -97,17 +97,21 @@ fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
     var localSkins by remember { mutableStateOf(SkinRepository.loadAllSkins(context)) }
     var catalog by remember { mutableStateOf(emptyList<RemoteSkinEntry>()) }
     var favoriteIds by remember { mutableStateOf(TimerPreferences.get(context).loadFavoriteSkinIds()) }
+    // 별 토글은 카드만 즉시 바꾸고, 캐러셀 정렬은 의도적인 화면 재진입/필터 전환 때만 갱신한다.
+    var orderingFavoriteIds by remember { mutableStateOf(favoriteIds) }
     var purchased by remember { mutableStateOf(emptySet<String>()) }
     var hasPass by remember { mutableStateOf(false) }
     var appliedId by remember { mutableStateOf<String?>(null) }
 
     var ownedOnly by rememberSaveable { mutableStateOf(false) }
     var favOnly by rememberSaveable { mutableStateOf(false) }
-    val downloadingIds = remember { mutableStateOf(setOf<String>()) }
+    val downloadProgresses = remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    val failedDownloadIds = remember { mutableStateOf(emptySet<String>()) }
 
     fun reload() {
         val prefs = TimerPreferences.get(context)
         favoriteIds = prefs.loadFavoriteSkinIds()
+        orderingFavoriteIds = favoriteIds
         val data = prefs.load()
         purchased = data.purchasedSkinIds
         hasPass = data.hasLifetimePass
@@ -133,8 +137,11 @@ fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
         if (entries != null) catalog = entries
     }
 
-    val items = remember(localSkins, catalog, ownedOnly, favOnly, favoriteIds, purchased, hasPass) {
-        buildDisplayList(localSkins, catalog, favoriteIds, purchased, hasPass, ownedOnly, favOnly)
+    val items = remember(localSkins, catalog, ownedOnly, favOnly, favoriteIds, orderingFavoriteIds, purchased, hasPass) {
+        buildDisplayList(
+            localSkins, catalog, favoriteIds, orderingFavoriteIds,
+            purchased, hasPass, ownedOnly, favOnly,
+        )
     }
 
     Column(
@@ -147,7 +154,10 @@ fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
             ownedOnly = ownedOnly,
             favOnly = favOnly,
             onOwned = { ownedOnly = !ownedOnly },
-            onFav = { favOnly = !favOnly },
+            onFav = {
+                favOnly = !favOnly
+                orderingFavoriteIds = favoriteIds
+            },
             modifier = Modifier.padding(top = 16.dp),
         )
 
@@ -179,9 +189,9 @@ fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
         // 테마 이름.
         Text(
             text = focused.name,
+            style = AppTypography.headlineSmall,
             color = AppColors.OnSurface,
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 16.dp),
         )
@@ -213,7 +223,7 @@ fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
                 VaultCard(
                     item = item,
                     isFocused = isFocused,
-                    favorited = item.id in favoriteIds,
+                    favorited = item.owned && item.id in favoriteIds,
                     applied = item.id == appliedId,
                     onToggleStar = {
                         val nowFav = item.id !in favoriteIds
@@ -238,7 +248,8 @@ fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
         ActionButtons(
             item = focused,
             appliedId = appliedId,
-            downloading = focused.id in downloadingIds.value,
+            downloadProgress = downloadProgresses.value[focused.id],
+            downloadFailed = focused.id in failedDownloadIds.value,
             onApply = {
                 TimerController.selectCharacterSkin(context, focused.id)
                 TimerController.selectTimerSkin(context, focused.id)
@@ -252,20 +263,26 @@ fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
                 Toast.makeText(context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
             },
             onDownload = { entry ->
-                downloadingIds.value = downloadingIds.value + entry.skinId
+                downloadProgresses.value = downloadProgresses.value + (entry.skinId to -1)
+                failedDownloadIds.value = failedDownloadIds.value - entry.skinId
                 SkinDownloader.download(
                     context = context.applicationContext,
                     entry = entry,
-                    onProgress = {},
+                    onProgress = { percent ->
+                        downloadProgresses.value = downloadProgresses.value + (entry.skinId to percent)
+                    },
                     onComplete = { success ->
-                        android.os.Handler(android.os.Looper.getMainLooper()).post {
-                            downloadingIds.value = downloadingIds.value - entry.skinId
-                            val msg = if (success)
-                                "${entry.name} ${context.getString(R.string.skin_download_complete)}"
-                            else context.getString(R.string.skin_download_fail)
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                            reload()
+                        downloadProgresses.value = downloadProgresses.value - entry.skinId
+                        failedDownloadIds.value = if (success) {
+                            failedDownloadIds.value - entry.skinId
+                        } else {
+                            failedDownloadIds.value + entry.skinId
                         }
+                        val msg = if (success)
+                            "${entry.name} ${context.getString(R.string.skin_download_complete)}"
+                        else context.getString(R.string.skin_download_fail)
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        reload()
                     },
                 )
             },
@@ -279,6 +296,7 @@ private fun buildDisplayList(
     localSkins: List<com.daintyz.timerwidget.model.Skin>,
     catalog: List<RemoteSkinEntry>,
     favoriteIds: Set<String>,
+    orderingFavoriteIds: Set<String>,
     purchased: Set<String>,
     hasPass: Boolean,
     ownedOnly: Boolean,
@@ -301,9 +319,10 @@ private fun buildDisplayList(
     }
     var filtered = all
     if (ownedOnly) filtered = filtered.filter { it.owned }
-    if (favOnly) filtered = filtered.filter { it.id in favoriteIds }
+    if (favOnly) filtered = filtered.filter { it.owned && it.id in favoriteIds }
     return filtered.sortedWith(
-        compareByDescending<VaultItem> { it.id in favoriteIds }.thenByDescending { it.owned }
+        compareByDescending<VaultItem> { it.owned && it.id in orderingFavoriteIds }
+            .thenByDescending { it.owned }
     )
 }
 
@@ -447,11 +466,13 @@ private fun VaultCard(
         }
 
         // 좌상단: 즐겨찾기 별 (팝 애니메이션).
-        StarToggle(
-            favorited = favorited,
-            onClick = onToggleStar,
-            modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
-        )
+        if (item.owned) {
+            StarToggle(
+                favorited = favorited,
+                onClick = onToggleStar,
+                modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
+            )
+        }
     }
 }
 
@@ -560,13 +581,15 @@ private fun localCardBitmap(item: VaultItem.Local, isFocused: Boolean): Bitmap? 
 private fun ActionButtons(
     item: VaultItem,
     appliedId: String?,
-    downloading: Boolean,
+    downloadProgress: Int?,
+    downloadFailed: Boolean,
     onApply: () -> Unit,
     onBuy: () -> Unit,
     onDownload: (RemoteSkinEntry) -> Unit,
     onPreview: () -> Unit,
 ) {
     val applied = item.id == appliedId
+    val downloading = downloadProgress != null
     Button(
         onClick = {
             when {
@@ -587,10 +610,11 @@ private fun ActionButtons(
         val label = when {
             downloading -> stringResource(R.string.skin_btn_downloading)
             item.owned -> stringResource(if (applied) R.string.vault_in_use else R.string.vault_apply)
+            item is VaultItem.Remote && item.isFree && downloadFailed -> stringResource(R.string.skin_btn_retry)
             item is VaultItem.Remote && item.isFree -> stringResource(R.string.skin_btn_download)
             else -> stringResource(R.string.vault_buy)
         }
-        Text(label, fontSize = 16.sp)
+        DownloadButtonContent(label = label, progress = downloadProgress)
     }
 
     TextButton(

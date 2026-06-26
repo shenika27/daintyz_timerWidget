@@ -1,0 +1,10 @@
+Gmarket Sans
+
+Source: https://corp.gmarket.com/fonts/
+Bundled files: GmarketSansMedium.ttf, GmarketSansBold.ttf
+
+Gmarket states that Gmarket Sans may be used freely without restrictions for
+both commercial and non-commercial purposes, including modification and
+redistribution. This notice is retained with the app source for attribution
+and audit purposes. Confirm the latest terms at the official source above
+before a new public release.

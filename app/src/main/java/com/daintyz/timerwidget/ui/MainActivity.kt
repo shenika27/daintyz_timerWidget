@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** VaultItem 상세/미리보기 화면(Compose 캐러셀)으로 이동. 보유=상태 스와이프, 미보유=prev 스와이프. */
-    private fun openDetail(item: VaultItem) {
+    private fun openDetail(item: VaultItem, openedFromStore: Boolean = false) {
         startActivity(Intent(this, DetailActivity::class.java).apply {
             putExtra(DetailActivity.EXTRA_SKIN_ID, item.id)
             putExtra(DetailActivity.EXTRA_NAME, item.name)
@@ -99,6 +99,7 @@ class MainActivity : AppCompatActivity() {
             putExtra(DetailActivity.EXTRA_PRICE, item.price)
             putExtra(DetailActivity.EXTRA_PRESTIGE, item.prestige)
             putExtra(DetailActivity.EXTRA_SALE_EXPIRED, item.saleStatus == SaleStatus.EXPIRED)
+            putExtra(DetailActivity.EXTRA_OPENED_FROM_STORE, openedFromStore)
             if (item is VaultItem.Remote) {
                 putExtra(DetailActivity.EXTRA_ZIP_URL, item.entry.zipUrl)
                 putExtra(DetailActivity.EXTRA_PREVIEW_BASE, item.entry.baseUrl)
@@ -118,7 +119,7 @@ class MainActivity : AppCompatActivity() {
 }
 
 @Composable
-private fun AppShell(requestedTab: Int, onOpenDetail: (VaultItem) -> Unit) {
+private fun AppShell(requestedTab: Int, onOpenDetail: (VaultItem, Boolean) -> Unit) {
     var selected by remember { mutableStateOf(requestedTab) }
     LaunchedEffect(requestedTab) { selected = requestedTab }
 
@@ -134,9 +135,9 @@ private fun AppShell(requestedTab: Int, onOpenDetail: (VaultItem) -> Unit) {
     ) { padding ->
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().padding(padding)) {
             when (selected) {
-                1 -> StoreScreen(onOpenDetail = onOpenDetail)
+                1 -> StoreScreen(onOpenDetail = { onOpenDetail(it, true) })
                 2 -> SettingsScreen()
-                else -> VaultScreen(onOpenDetail = onOpenDetail)
+                else -> VaultScreen(onOpenDetail = { onOpenDetail(it, false) })
             }
         }
     }

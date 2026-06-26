@@ -20,15 +20,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -100,16 +104,20 @@ fun DetailScreen(
     previewBase: String,
     zipUrl: String?,
     saleExpired: Boolean = false,
+    showWishlist: Boolean = false,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
 
     var owned by remember { mutableStateOf(initialOwned) }
-    var downloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableStateOf<Int?>(null) }
+    var downloadFailed by remember { mutableStateOf(false) }
     var skin by remember { mutableStateOf(SkinRepository.findSkin(context, skinId)) }
     var applied by remember {
         mutableStateOf(TimerPreferences.get(context).load().selectedCharacterSkinId == skinId)
     }
+    var wishlisted by remember { mutableStateOf(skinId in TimerPreferences.get(context).loadFavoriteSkinIds()) }
+    val downloading = downloadProgress != null
 
     // 미보유: prevNN을 앞에서부터 순차 탐침(첫 결번에서 중단)해 '존재하는 URL'만 모은다. 표시는 Coil(RemoteImage).
     val previews = remember { mutableStateListOf<String>() }
@@ -138,6 +146,7 @@ fun DetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .statusBarsPadding()
                 .height(56.dp)
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center,
@@ -159,13 +168,38 @@ fun DetailScreen(
             }
             Text(
                 text = name,
+                style = AppTypography.headlineSmall,
                 color = AppColors.OnSurface,
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 48.dp),
             )
+            if (showWishlist && !owned) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            val next = !wishlisted
+                            TimerPreferences.get(context).setFavorite(skinId, next)
+                            wishlisted = next
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (wishlisted) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = stringResource(
+                            if (wishlisted) R.string.cd_remove_wishlist else R.string.cd_add_wishlist
+                        ),
+                        tint = if (wishlisted) AppColors.Primary else AppColors.Brown,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
         }
+
+        Spacer(Modifier.height(12.dp))
 
         val localSkin = skin
         if (owned && localSkin != null) {
@@ -268,9 +302,14 @@ fun DetailScreen(
                     downloading -> {}
                     isFree || price <= 0 -> startDownload(
                         context, skinId, name, isFree, price, prestige, previewBase, zipUrl,
-                        onStart = { downloading = true },
+                        onStart = {
+                            downloadProgress = -1
+                            downloadFailed = false
+                        },
+                        onProgress = { percent -> downloadProgress = percent },
                         onDone = { success ->
-                            downloading = false
+                            downloadProgress = null
+                            downloadFailed = !success
                             if (success) {
                                 owned = true
                                 skin = SkinRepository.findSkin(context, skinId)
@@ -295,9 +334,10 @@ fun DetailScreen(
                 owned -> stringResource(if (applied) R.string.detail_applied else R.string.detail_apply)
                 saleExpired -> "기간만료"
                 downloading -> stringResource(R.string.skin_btn_downloading)
+                downloadFailed -> stringResource(R.string.skin_btn_retry)
                 else -> buyLabel
             }
-            Text(label, fontSize = 16.sp)
+            DownloadButtonContent(label = label, progress = downloadProgress)
         }
         Spacer(Modifier.height(48.dp))
     }
@@ -490,6 +530,7 @@ private fun startDownload(
     previewBase: String,
     zipUrl: String?,
     onStart: () -> Unit,
+    onProgress: (Int) -> Unit,
     onDone: (Boolean) -> Unit,
 ) {
     onStart()
@@ -506,15 +547,44 @@ private fun startDownload(
     SkinDownloader.download(
         context = context.applicationContext,
         entry = entry,
-        onProgress = {},
+        onProgress = onProgress,
         onComplete = { success ->
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                val msg = if (success)
-                    "$name ${context.getString(R.string.skin_download_complete)}"
-                else context.getString(R.string.skin_download_fail)
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                onDone(success)
-            }
+            val msg = if (success)
+                "$name ${context.getString(R.string.skin_download_complete)}"
+            else context.getString(R.string.skin_download_fail)
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            onDone(success)
         },
     )
+}
+
+/** 다운로드 중에는 버튼 안에서 실제 수신률(또는 전체 크기 미상 상태)을 보여준다. */
+@Composable
+fun DownloadButtonContent(label: String, progress: Int?) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, fontSize = 16.sp)
+        if (progress != null) {
+            if (progress >= 0) {
+                LinearProgressIndicator(
+                    progress = { progress / 100f },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(),
+                    color = AppColors.OnPrimary,
+                    trackColor = AppColors.Primary,
+                )
+            } else {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(),
+                    color = AppColors.OnPrimary,
+                    trackColor = AppColors.Primary,
+                )
+            }
+        }
+    }
 }

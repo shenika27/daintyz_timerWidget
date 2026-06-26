@@ -55,6 +55,7 @@
     <string name="skin_btn_buy">구매</string>
     <string name="skin_btn_download">다운로드</string>
     <string name="skin_btn_downloading">다운로드 중…</string>
+    <string name="skin_btn_retry">다시 시도</string>
     <string name="skin_download_complete">다운로드 완료</string>
     <string name="skin_download_fail">다운로드 실패. 다시 시도해주세요.</string>
     <string name="skin_apply_empty">사용 가능한 스킨이 없습니다. 상점에서 받아보세요.</string>
@@ -62,6 +63,7 @@
     <!-- 상점/상세 화면 -->
     <string name="store_title">상점</string>
     <string name="store_show_all">구매한 항목 포함 보기</string>
+    <string name="store_wishlist_only">찜한 항목만 보기</string>
     <string name="store_set_label">캐릭터 + 타이머 세트</string>
     <string name="store_buy_stub">구매 기능은 준비 중입니다</string>
     <!-- 프리스티지(희귀) 스킨 배지 — 디자인 추후, 텍스트 틀만 -->
@@ -110,5 +112,9 @@
     <string name="vault_fav_empty">아직 즐겨찾기한 테마가 없어요.</string>
     <string name="vault_locked_empty">조건에 맞는 테마가 없어요.</string>
     <string name="cd_favorite">즐겨찾기</string>
+    <string name="cd_add_wishlist">찜하기</string>
+    <string name="cd_remove_wishlist">찜 취소</string>
+    <string name="cd_enable_wishlist_filter">찜한 항목만 보기</string>
+    <string name="cd_disable_wishlist_filter">찜 필터 해제</string>
     <string name="cd_locked">잠김</string>
 </resources>

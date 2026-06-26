@@ -25,6 +25,7 @@ class DetailActivity : AppCompatActivity() {
         const val EXTRA_ZIP_URL = "zip_url"
         const val EXTRA_PREVIEW_BASE = "preview_base"
         const val EXTRA_SALE_EXPIRED = "sale_expired"
+        const val EXTRA_OPENED_FROM_STORE = "opened_from_store"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,6 +40,7 @@ class DetailActivity : AppCompatActivity() {
         val zipUrl = intent.getStringExtra(EXTRA_ZIP_URL)
         val previewBase = intent.getStringExtra(EXTRA_PREVIEW_BASE) ?: SkinRepoUrls.ASSET_BASE
         val saleExpired = intent.getBooleanExtra(EXTRA_SALE_EXPIRED, false)
+        val openedFromStore = intent.getBooleanExtra(EXTRA_OPENED_FROM_STORE, false)
 
         setContent {
             AppTheme {
@@ -52,6 +54,7 @@ class DetailActivity : AppCompatActivity() {
                     previewBase = previewBase,
                     zipUrl = zipUrl,
                     saleExpired = saleExpired,
+                    showWishlist = openedFromStore,
                     onBack = { finish() },
                 )
             }

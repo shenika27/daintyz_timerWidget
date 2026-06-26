@@ -12,10 +12,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -64,12 +70,15 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
     var catalog by remember { mutableStateOf(emptyList<RemoteSkinEntry>()) }
     var purchased by remember { mutableStateOf(emptySet<String>()) }
     var hasPass by remember { mutableStateOf(false) }
+    var favoriteIds by remember { mutableStateOf(TimerPreferences.get(context).loadFavoriteSkinIds()) }
     var showAll by rememberSaveable { mutableStateOf(false) }
+    var wishlistOnly by rememberSaveable { mutableStateOf(false) }
 
     fun reload() {
         val data = TimerPreferences.get(context).load()
         purchased = data.purchasedSkinIds
         hasPass = data.hasLifetimePass
+        favoriteIds = TimerPreferences.get(context).loadFavoriteSkinIds()
         localSkins = SkinRepository.loadAllSkins(context)
     }
 
@@ -87,7 +96,7 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
         if (entries != null) catalog = entries
     }
 
-    val items = remember(localSkins, catalog, purchased, hasPass, showAll) {
+    val items = remember(localSkins, catalog, purchased, hasPass, favoriteIds, showAll, wishlistOnly) {
         val localIds = localSkins.map { it.skinId }.toSet()
         buildList {
             for (skin in localSkins) {
@@ -107,6 +116,8 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
                 if (remote.saleStatus == SaleStatus.UPCOMING) continue
                 add(remote)
             }
+        }.let { list ->
+            if (wishlistOnly) list.filter { !it.owned && it.id in favoriteIds } else list
         }
     }
 
@@ -114,20 +125,22 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
         // 중앙 타이틀.
         Text(
             text = stringResource(R.string.store_title),
+            style = AppTypography.headlineSmall,
             color = AppColors.TextPrimary,
             fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
         )
 
         // 목록 좌측상단 작은 전체보기 토글.
         Row(
-            modifier = Modifier
-                .padding(start = 16.dp, bottom = 2.dp)
-                .clickable { showAll = !showAll },
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Row(
+                modifier = Modifier.clickable { showAll = !showAll },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             Checkbox(
                 checked = showAll,
                 onCheckedChange = { showAll = it },
@@ -138,6 +151,35 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
                 color = AppColors.Brown,
                 fontSize = 12.sp,
             )
+            }
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (wishlistOnly) AppColors.Primary else AppColors.Surface)
+                        .border(
+                            1.dp,
+                            if (wishlistOnly) AppColors.Primary else AppColors.Stroke,
+                            CircleShape,
+                        )
+                        .clickable { wishlistOnly = !wishlistOnly },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (wishlistOnly) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = stringResource(
+                            if (wishlistOnly) R.string.cd_disable_wishlist_filter
+                            else R.string.cd_enable_wishlist_filter
+                        ),
+                        tint = if (wishlistOnly) AppColors.OnPrimary else AppColors.Brown,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
         }
 
         LazyColumn(
@@ -146,7 +188,16 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             items(items, key = { it.id }) { item ->
-                StoreHeroCard(item = item, onClick = { onOpenDetail(item) })
+                StoreHeroCard(
+                    item = item,
+                    favorited = item.id in favoriteIds,
+                    onToggleWishlist = {
+                        val next = item.id !in favoriteIds
+                        TimerPreferences.get(context).setFavorite(item.id, next)
+                        favoriteIds = if (next) favoriteIds + item.id else favoriteIds - item.id
+                    },
+                    onClick = { onOpenDetail(item) },
+                )
             }
         }
     }
@@ -157,7 +208,12 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
  * 좌상단 배지: NEW(출시일+7일 이내) / 프리스티지. 탭하면 상세로 이동(구매/다운로드는 거기서).
  */
 @Composable
-private fun StoreHeroCard(item: VaultItem, onClick: () -> Unit) {
+private fun StoreHeroCard(
+    item: VaultItem,
+    favorited: Boolean,
+    onToggleWishlist: () -> Unit,
+    onClick: () -> Unit,
+) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -197,6 +253,26 @@ private fun StoreHeroCard(item: VaultItem, onClick: () -> Unit) {
                 }
                 if (item.prestige) {
                     Badge(stringResource(R.string.skin_tag_prestige), AppColors.Primary, AppColors.OnPrimary)
+                }
+            }
+            if (!item.owned) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .clickable { onToggleWishlist() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (favorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = stringResource(
+                            if (favorited) R.string.cd_remove_wishlist else R.string.cd_add_wishlist
+                        ),
+                        tint = if (favorited) AppColors.Primary else AppColors.Brown,
+                        modifier = Modifier.size(24.dp),
+                    )
                 }
             }
         }

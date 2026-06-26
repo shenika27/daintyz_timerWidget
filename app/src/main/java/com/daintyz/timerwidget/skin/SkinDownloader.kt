@@ -1,6 +1,8 @@
 package com.daintyz.timerwidget.skin
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.daintyz.timerwidget.model.RemoteSkinEntry
 import org.json.JSONObject
@@ -100,7 +102,9 @@ object SkinDownloader {
 
     /**
      * 스킨 zip을 다운로드하고 내부 저장소(filesDir/skins/{skinId}/)에 압축 해제한다.
-     * 별도 스레드에서 실행되므로 onProgress/onComplete는 runOnUiThread로 감싸서 처리.
+     * 네트워크 작업은 별도 스레드에서 실행하되, UI가 바로 상태를 갱신할 수 있도록
+     * onProgress/onComplete는 메인 스레드에서 호출한다. onProgress의 -1은
+     * 서버가 Content-Length를 보내지 않아 전체 크기를 알 수 없다는 뜻이다.
      */
     fun download(
         context: Context,
@@ -109,6 +113,8 @@ object SkinDownloader {
         onComplete: (success: Boolean) -> Unit
     ) {
         Thread {
+            val mainHandler = Handler(Looper.getMainLooper())
+            fun reportProgress(percent: Int) = mainHandler.post { onProgress(percent) }
             val success = runCatching {
                 val destDir = File(skinsDir(context), entry.skinId).also { it.mkdirs() }
                 val tempZip = File(context.cacheDir, "${entry.skinId}_dl.zip")
@@ -119,6 +125,8 @@ object SkinDownloader {
                 conn.connect()
                 val total = conn.contentLength.toLong()
                 var received = 0L
+                var lastReported = Int.MIN_VALUE
+                if (total <= 0L) reportProgress(-1)
                 conn.inputStream.use { input ->
                     tempZip.outputStream().use { output ->
                         val buf = ByteArray(8192)
@@ -126,7 +134,13 @@ object SkinDownloader {
                         while (input.read(buf).also { n = it } != -1) {
                             output.write(buf, 0, n)
                             received += n
-                            if (total > 0) onProgress((received * 100 / total).toInt())
+                            if (total > 0L) {
+                                val percent = (received * 100 / total).toInt().coerceIn(0, 100)
+                                if (percent != lastReported) {
+                                    lastReported = percent
+                                    reportProgress(percent)
+                                }
+                            }
                         }
                     }
                 }
@@ -162,7 +176,7 @@ object SkinDownloader {
             }.isSuccess
 
             if (!success) Log.e(TAG, "다운로드 실패: ${entry.skinId}")
-            onComplete(success)
+            mainHandler.post { onComplete(success) }
         }.start()
     }
 
