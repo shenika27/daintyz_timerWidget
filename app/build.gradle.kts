@@ -41,6 +41,10 @@ android {
         compose = true
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     composeOptions {
         // Kotlin 1.9.24 호환 Compose 컴파일러.
         kotlinCompilerExtensionVersion = "1.5.14"
@@ -75,6 +79,8 @@ dependencies {
     implementation("io.coil-kt:coil-gif:2.7.0")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("org.robolectric:robolectric:4.16.1")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
 }

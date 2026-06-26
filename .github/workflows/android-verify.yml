@@ -33,8 +33,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Assemble debug APK and run lint
-        run: ./gradlew :app:assembleDebug :app:lintDebug --stacktrace
+      - name: Assemble debug APK, run lint, and run unit tests
+        run: ./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
 
       - name: Upload lint report
         if: always()
