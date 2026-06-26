@@ -3,6 +3,7 @@ package com.daintyz.timerwidget.ui.compose
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +31,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -40,7 +42,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -235,8 +239,10 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
     unlockedSkin?.let { (skinId, name) ->
         AlertDialog(
             onDismissRequest = { unlockedSkin = null },
+            icon = { Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AppColors.Primary) },
             title = { Text("$name 해금 완료!", color = AppColors.TextPrimary) },
             text = { Text("보유 목록에서 확인하시겠습니까?", color = AppColors.Brown) },
+            shape = RoundedCornerShape(20.dp),
             containerColor = AppColors.Background,
             confirmButton = {
                 TextButton(onClick = {
@@ -301,23 +307,27 @@ private fun CompactField(
     keyboardType: KeyboardType = KeyboardType.Text,
     textAlign: TextAlign = TextAlign.Start,
 ) {
+    val fieldTextColor by animateColorAsState(
+        if (enabled) AppColors.TextPrimary else AppColors.Brown, label = "fieldText"
+    )
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         enabled = enabled,
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        textStyle = TextStyle(color = AppColors.TextPrimary, fontSize = 15.sp, textAlign = textAlign),
+        textStyle = TextStyle(color = fieldTextColor, fontSize = 15.sp, textAlign = textAlign),
         cursorBrush = SolidColor(AppColors.Primary),
         modifier = Modifier
             .width(width)
             .height(42.dp)
+            .alpha(if (enabled) 1f else 0.55f) // 비활성(확인 중) 시 흐리게
             .clip(RoundedCornerShape(10.dp))
-            .background(AppColors.Surface)
+            .background(if (enabled) AppColors.Surface else AppColors.CardCream)
             .border(1.dp, AppColors.Stroke, RoundedCornerShape(10.dp)),
         decorationBox = { inner ->
             Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
                 contentAlignment = if (textAlign == TextAlign.Center) Alignment.Center else Alignment.CenterStart,
             ) { inner() }
         },
@@ -347,18 +357,20 @@ private fun SegmentedToggle(options: List<String>, selectedIndex: Int, onSelect:
     ) {
         options.forEachIndexed { idx, label ->
             val selected = idx == selectedIndex
+            val bg by animateColorAsState(
+                if (selected) AppColors.Primary else Color.Transparent, label = "segBg"
+            )
+            val fg by animateColorAsState(
+                if (selected) AppColors.OnPrimary else AppColors.Brown, label = "segFg"
+            )
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(9.dp))
-                    .background(if (selected) AppColors.Primary else androidx.compose.ui.graphics.Color.Transparent)
+                    .background(bg)
                     .clickable { onSelect(idx) }
                     .padding(horizontal = 14.dp, vertical = 7.dp),
             ) {
-                Text(
-                    label,
-                    color = if (selected) AppColors.OnPrimary else AppColors.Brown,
-                    fontSize = 13.sp,
-                )
+                Text(label, color = fg, fontSize = 13.sp)
             }
         }
     }
