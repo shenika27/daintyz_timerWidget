@@ -67,6 +67,7 @@ import com.daintyz.timerwidget.skin.FrameAnimationController
 import com.daintyz.timerwidget.skin.SkinAvailabilityChecker
 import com.daintyz.timerwidget.skin.SkinDownloader
 import com.daintyz.timerwidget.skin.SkinRepository
+import com.daintyz.timerwidget.ui.SaleStatus
 import com.daintyz.timerwidget.ui.VaultItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -290,7 +291,12 @@ private fun buildDisplayList(
             add(VaultItem.Local(skin, owned))
         }
         for (entry in catalog) {
-            if (entry.skinId !in localIds) add(VaultItem.Remote(entry))
+            if (entry.hidden) continue
+            if (entry.skinId in localIds) continue
+            val remote = VaultItem.Remote(entry)
+            // 창고 캐러셀은 보유/구매가능(ACTIVE)만 노출. 미출시(UPCOMING)·기간만료(EXPIRED)는 제외.
+            if (remote.saleStatus != SaleStatus.ACTIVE) continue
+            add(remote)
         }
     }
     var filtered = all

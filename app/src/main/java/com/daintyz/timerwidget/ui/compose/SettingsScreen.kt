@@ -22,6 +22,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,10 @@ import com.daintyz.timerwidget.controller.TimerController
 import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.LayoutMode
 import com.daintyz.timerwidget.model.TimerState
+import com.daintyz.timerwidget.skin.GiftCodeRedeemer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** 설정 탭 — 증감 단위, 현재 상태/남은시간, 위젯 레이아웃 모드. */
 @Composable
@@ -49,6 +54,9 @@ fun SettingsScreen() {
     var remaining by remember { mutableStateOf("") }
     var step by remember { mutableStateOf(TextFieldValue("")) }
     var layoutMode by remember { mutableStateOf(LayoutMode.TOP) }
+    var giftCode by remember { mutableStateOf(TextFieldValue("")) }
+    var redeeming by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     fun sync() {
         val data = TimerPreferences.get(context).load()
@@ -128,6 +136,52 @@ fun SettingsScreen() {
             LayoutModeOption("타이머 아래 (캐릭터 위)", layoutMode == LayoutMode.BOTTOM) {
                 layoutMode = LayoutMode.BOTTOM
                 TimerController.setLayoutMode(context, LayoutMode.BOTTOM)
+            }
+        }
+
+        // 기프트코드.
+        Column {
+            Text("기프트코드", color = AppColors.Brown, fontSize = 13.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = giftCode,
+                    onValueChange = { giftCode = it },
+                    singleLine = true,
+                    enabled = !redeeming,
+                    modifier = Modifier.weight(1f),
+                )
+                Button(
+                    onClick = {
+                        val code = giftCode.text
+                        scope.launch {
+                            redeeming = true
+                            val result = withContext(Dispatchers.IO) {
+                                GiftCodeRedeemer.redeem(context, code)
+                            }
+                            redeeming = false
+                            val msg = when (result) {
+                                is GiftCodeRedeemer.Result.Success -> {
+                                    giftCode = TextFieldValue("")
+                                    "${result.name} 해금 완료!"
+                                }
+                                is GiftCodeRedeemer.Result.AlreadyOwned ->
+                                    "이미 보유한 테마예요 (${result.name})"
+                                GiftCodeRedeemer.Result.Invalid -> "유효하지 않은 코드예요"
+                                GiftCodeRedeemer.Result.Error -> "네트워크 오류 — 잠시 후 다시 시도하세요"
+                            }
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    enabled = !redeeming && giftCode.text.isNotBlank(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.Primary, contentColor = AppColors.OnPrimary,
+                    ),
+                ) { Text(if (redeeming) "확인 중…" else "해금") }
             }
         }
     }

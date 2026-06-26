@@ -31,6 +31,15 @@ sealed interface VaultItem {
     /** 출시일로부터 [NEW_BADGE_DAYS]일 이내면 true(상점 NEW 배지). 파싱 실패/없음이면 false. */
     val isNew: Boolean get() = isWithinNewWindow(createdAt)
 
+    /** 한정구매 시작일("yyyy-MM-dd"). null이면 시작 제한 없음. 로컬 스킨은 항상 null. */
+    val saleStart: String?
+
+    /** 한정구매 종료일("yyyy-MM-dd", 당일 포함). null이면 종료 제한 없음. 로컬 스킨은 항상 null. */
+    val saleEnd: String?
+
+    /** 현재 기기 날짜 기준 판매 상태. 로컬(보유/내장) 스킨은 saleStart/End가 없어 항상 ACTIVE. */
+    val saleStatus: SaleStatus get() = saleWindowStatus(saleStart, saleEnd)
+
     data class Local(val skin: Skin, override val owned: Boolean) : VaultItem {
         override val id get() = skin.skinId
         override val name get() = skin.name
@@ -39,6 +48,8 @@ sealed interface VaultItem {
         override val prestige get() = skin.prestige
         override val description get() = skin.description
         override val createdAt get() = skin.createdAt
+        override val saleStart get() = null
+        override val saleEnd get() = null
     }
 
     data class Remote(val entry: RemoteSkinEntry) : VaultItem {
@@ -50,7 +61,31 @@ sealed interface VaultItem {
         override val prestige get() = entry.prestige
         override val description get() = entry.description
         override val createdAt get() = entry.createdAt
+        override val saleStart get() = entry.saleStart
+        override val saleEnd get() = entry.saleEnd
     }
+}
+
+/** 한정구매 기간 판정 결과. */
+enum class SaleStatus {
+    /** 구매 가능(기간 내이거나 기간 제한 없음). */ ACTIVE,
+    /** 시작일 전 — 아직 미출시(상점에서 숨김). */ UPCOMING,
+    /** 종료일 후 — 기간만료(상점에 잠금 표시, 구매 불가). */ EXPIRED,
+}
+
+/**
+ * saleStart/saleEnd("yyyy-MM-dd") + 오늘 날짜로 판매 상태 판정. saleEnd는 당일 포함(그날 23:59까지 구매 가능).
+ * 값이 없거나 파싱 실패한 경계는 '제한 없음'으로 취급한다.
+ */
+private fun saleWindowStatus(start: String?, end: String?): SaleStatus {
+    val today = LocalDate.now()
+    val startDate = start?.takeIf { it.isNotBlank() }
+        ?.let { runCatching { LocalDate.parse(it.trim(), DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull() }
+    val endDate = end?.takeIf { it.isNotBlank() }
+        ?.let { runCatching { LocalDate.parse(it.trim(), DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull() }
+    if (startDate != null && today.isBefore(startDate)) return SaleStatus.UPCOMING
+    if (endDate != null && today.isAfter(endDate)) return SaleStatus.EXPIRED
+    return SaleStatus.ACTIVE
 }
 
 private fun isWithinNewWindow(createdAt: String?): Boolean {

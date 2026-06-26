@@ -65,6 +65,11 @@ class TimerPreferences private constructor(context: Context) {
         prefs.edit().putStringSet(KEY_FAVORITE_SKIN_IDS, next).apply()
     }
 
+    /** 기프트코드 해금 등으로 보유 스킨을 추가한다(중복은 Set이 흡수). */
+    fun addPurchasedSkinId(skinId: String) {
+        update { it.copy(purchasedSkinIds = it.purchasedSkinIds + skinId) }
+    }
+
     /** [load] → 변형 → [save]를 한 번에. 변형 결과를 그대로 반환한다. */
     inline fun update(transform: (TimerData) -> TimerData): TimerData {
         val updated = transform(load())

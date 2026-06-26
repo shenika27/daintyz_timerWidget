@@ -14,6 +14,12 @@ object SkinRepoUrls {
 
     const val ASSET_BASE = "https://cdn.jsdelivr.net/gh/shenika27/daintyz_timer_characterList@main"
 
+    /**
+     * catalog.json 단일 출처. 무거운 에셋(zip/이미지)은 jsDelivr([ASSET_BASE])로 받지만, catalog은
+     * 갱신 즉시 반영돼야 해 캐시가 강한 jsDelivr 대신 GitHub raw를 쓴다(메모리: skin-catalog-cdn-strategy).
+     */
+    const val CATALOG_URL = "https://raw.githubusercontent.com/shenika27/daintyz_timer_characterList/main/catalog.json"
+
     /** 미리보기 칸마다 시도할 확장자(앞에서부터 탐침, 먼저 존재하는 것을 사용). */
     val PREVIEW_EXTS = listOf("gif", "png")
 

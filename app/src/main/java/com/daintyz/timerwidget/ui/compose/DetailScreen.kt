@@ -100,6 +100,7 @@ fun DetailScreen(
     prestige: Boolean,
     previewBase: String,
     zipUrl: String?,
+    saleExpired: Boolean = false,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -279,7 +280,8 @@ fun DetailScreen(
                     ).show()
                 }
             },
-            enabled = !(downloading || (owned && applied)),
+            // 보유 중이면 기간과 무관하게 적용 가능. 미보유 + 기간만료면 구매 불가.
+            enabled = !(downloading || (owned && applied) || (saleExpired && !owned)),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = AppColors.Primary,
@@ -289,6 +291,7 @@ fun DetailScreen(
         ) {
             val label = when {
                 owned -> stringResource(if (applied) R.string.detail_applied else R.string.detail_apply)
+                saleExpired -> "기간만료"
                 downloading -> stringResource(R.string.skin_btn_downloading)
                 else -> buyLabel
             }

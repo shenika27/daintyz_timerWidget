@@ -45,13 +45,12 @@ import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.RemoteSkinEntry
 import com.daintyz.timerwidget.skin.SkinAvailabilityChecker
 import com.daintyz.timerwidget.skin.SkinDownloader
+import com.daintyz.timerwidget.skin.SkinRepoUrls
 import com.daintyz.timerwidget.skin.SkinRepository
+import com.daintyz.timerwidget.ui.SaleStatus
 import com.daintyz.timerwidget.ui.VaultItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-private const val CATALOG_URL =
-    "https://raw.githubusercontent.com/shenika27/daintyz_timer_characterList/main/catalog.json"
 
 /** 보유(완료) 상태 표시 색 — 팔레트에 없는 슬롯이라 카드 푸터에서만 인라인으로 쓴다. */
 private val OwnedGreen = Color(0xFF1D9E75)
@@ -83,7 +82,7 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
 
     LaunchedEffect(Unit) {
         val entries = withContext(Dispatchers.IO) {
-            runCatching { SkinDownloader.fetchCatalog(CATALOG_URL) }.getOrNull()
+            runCatching { SkinDownloader.fetchCatalog(SkinRepoUrls.CATALOG_URL) }.getOrNull()
         }
         if (entries != null) catalog = entries
     }
@@ -97,7 +96,14 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
                 add(VaultItem.Local(skin, owned))
             }
             for (entry in catalog) {
-                if (entry.skinId !in localIds) add(VaultItem.Remote(entry))
+                // 숨김 스킨은 상점 목록에서 제외(기프트코드/링크 전용). 이미 보유한 경우엔
+                // 로컬 스킨으로 위에서 처리되므로 여기서 빠져도 창고/표시에 영향 없음.
+                if (entry.hidden) continue
+                if (entry.skinId in localIds) continue
+                val remote = VaultItem.Remote(entry)
+                // 한정구매: 시작 전(UPCOMING)은 미출시라 숨김. 종료 후(EXPIRED)는 카드는 두되 잠금 표시.
+                if (remote.saleStatus == SaleStatus.UPCOMING) continue
+                add(remote)
             }
         }
     }
@@ -181,6 +187,9 @@ private fun StoreHeroCard(item: VaultItem, onClick: () -> Unit) {
                 modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                if (item.saleStatus == SaleStatus.EXPIRED) {
+                    Badge("기간만료", AppColors.OnSurface, AppColors.Stroke)
+                }
                 if (item.isNew) {
                     Badge(stringResource(R.string.skin_tag_new), AppColors.OnPrimary, AppColors.Primary)
                 }
@@ -212,15 +221,25 @@ private fun StoreHeroCard(item: VaultItem, onClick: () -> Unit) {
                 }
             }
 
-            if (item.owned) {
-                Text(
+            when {
+                item.owned -> Text(
                     text = "✓ ${stringResource(R.string.skin_badge_owned)}",
                     color = OwnedGreen,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                 )
-            } else {
-                Text(
+                item.saleStatus == SaleStatus.EXPIRED -> Text(
+                    text = "기간만료",
+                    color = AppColors.Brown,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AppColors.Background)
+                        .border(1.dp, AppColors.Stroke, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                )
+                else -> Text(
                     text = priceLabel(item),
                     color = AppColors.TextPrimary,
                     fontSize = 14.sp,

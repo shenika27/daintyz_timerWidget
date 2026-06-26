@@ -98,6 +98,7 @@ class MainActivity : AppCompatActivity() {
             putExtra(DetailActivity.EXTRA_IS_FREE, item.isFree)
             putExtra(DetailActivity.EXTRA_PRICE, item.price)
             putExtra(DetailActivity.EXTRA_PRESTIGE, item.prestige)
+            putExtra(DetailActivity.EXTRA_SALE_EXPIRED, item.saleStatus == SaleStatus.EXPIRED)
             if (item is VaultItem.Remote) {
                 putExtra(DetailActivity.EXTRA_ZIP_URL, item.entry.zipUrl)
                 putExtra(DetailActivity.EXTRA_PREVIEW_BASE, item.entry.baseUrl)

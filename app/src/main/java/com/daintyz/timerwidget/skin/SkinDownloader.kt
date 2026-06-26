@@ -80,7 +80,13 @@ object SkinDownloader {
                             .ifBlank { SkinRepoUrls.themeThumb(skinId, baseUrl) },
                         baseUrl = baseUrl,
                         description = obj.optString("description").ifBlank { null },
-                        createdAt = obj.optString("createdAt").ifBlank { null }
+                        createdAt = obj.optString("createdAt").ifBlank { null },
+                        hidden = obj.optBoolean("hidden", false),
+                        saleStart = obj.optString("saleStart").ifBlank { null },
+                        saleEnd = obj.optString("saleEnd").ifBlank { null },
+                        giftCodeHashes = obj.optJSONArray("giftCodeHashes")?.let { a ->
+                            (0 until a.length()).mapNotNull { a.optString(it).ifBlank { null }?.lowercase() }
+                        }.orEmpty()
                     )
                 }.onFailure {
                     Log.e(TAG, "카탈로그 항목 파싱 실패(인덱스 $i) — 스킵", it)
