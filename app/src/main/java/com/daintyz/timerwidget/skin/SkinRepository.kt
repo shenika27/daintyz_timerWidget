@@ -141,6 +141,9 @@ object SkinRepository {
             skinId = json.getString("skinId"),
             name = json.getString("name"),
             isFree = json.optBoolean("isFree", false),
+            prestige = json.optBoolean("prestige", false),
+            description = json.optString("description").ifBlank { null },
+            createdAt = json.optString("createdAt").ifBlank { null },
             character = CharacterStates(
                 stop = parseFrameSet(character.getJSONObject("stop")),
                 running = parseRunningState(character.getJSONObject("running")),
@@ -148,10 +151,7 @@ object SkinRepository {
                 complete = parseFrameSet(character.getJSONObject("complete"))
             ),
             // timer 블록 생략 시 기본 스킨(내장 박스/구분선/기호 버튼)으로 폴백.
-            // 노스킨이 필요하면 timer 블록에 showBox:false, buttonStyle:"none" 등을 명시한다.
-            timer = parseTimerSkin(json.optJSONObject("timer") ?: JSONObject()),
-            // 블록이 실제로 있었는지 — 타이머 적용 탭 노출 판단용(렌더 폴백과 별개).
-            hasCustomTimer = json.has("timer")
+            timer = parseTimerSkin(json.optJSONObject("timer") ?: JSONObject())
         )
     }
 

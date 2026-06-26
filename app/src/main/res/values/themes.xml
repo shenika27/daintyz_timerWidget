@@ -7,6 +7,8 @@
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="android:colorBackground">@color/surface</item>
-        <item name="android:statusBarColor">@color/primary</item>
+        <!-- 상태바: 밝은 배경 + 어두운 아이콘 (콘텐츠와 통일). 엣지투엣지에서 statusBarColor는 무시되지만 구버전 호환용으로 둔다. -->
+        <item name="android:statusBarColor">@color/surface</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

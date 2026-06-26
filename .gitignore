@@ -17,3 +17,6 @@ app/release/
 # Keystore (절대 커밋 금지)
 *.jks
 *.keystore
+
+# 제거한 스킨 로컬 백업 (커밋 대상 아님)
+app/src/main/assets/skins_back/

@@ -19,6 +19,7 @@ class TimerPreferences private constructor(context: Context) {
     fun load(): TimerData = TimerData(
         state = TimerState.fromName(prefs.getString(KEY_STATE, null)),
         targetEndElapsed = prefs.getLong(KEY_TARGET_END_ELAPSED, 0L),
+        stateEnteredElapsed = prefs.getLong(KEY_STATE_ENTERED_ELAPSED, 0L),
         remainingMillisAtPause = prefs.getLong(KEY_REMAINING_AT_PAUSE, 0L),
         totalMillis = prefs.getLong(KEY_TOTAL_MILLIS, 0L),
         lastSetMinutes = prefs.getInt(KEY_LAST_SET_MINUTES, DEFAULT_MINUTES),
@@ -29,7 +30,8 @@ class TimerPreferences private constructor(context: Context) {
             ?: prefs.getString(KEY_SELECTED_SKIN_ID, null) ?: DEFAULT_SKIN_ID,
         selectedTimerSkinId = prefs.getString(KEY_SELECTED_TIMER_SKIN_ID, null)
             ?: prefs.getString(KEY_SELECTED_SKIN_ID, null) ?: DEFAULT_SKIN_ID,
-        purchasedSkinIds = prefs.getStringSet(KEY_PURCHASED_SKIN_IDS, emptySet())?.toSet() ?: emptySet()
+        purchasedSkinIds = prefs.getStringSet(KEY_PURCHASED_SKIN_IDS, emptySet())?.toSet() ?: emptySet(),
+        hasLifetimePass = prefs.getBoolean(KEY_LIFETIME_PASS, false)
     )
 
     // ---- 쓰기 ----
@@ -38,6 +40,7 @@ class TimerPreferences private constructor(context: Context) {
         prefs.edit().apply {
             putString(KEY_STATE, data.state.name)
             putLong(KEY_TARGET_END_ELAPSED, data.targetEndElapsed)
+            putLong(KEY_STATE_ENTERED_ELAPSED, data.stateEnteredElapsed)
             putLong(KEY_REMAINING_AT_PAUSE, data.remainingMillisAtPause)
             putLong(KEY_TOTAL_MILLIS, data.totalMillis)
             putInt(KEY_LAST_SET_MINUTES, data.lastSetMinutes)
@@ -46,7 +49,20 @@ class TimerPreferences private constructor(context: Context) {
             putString(KEY_SELECTED_CHARACTER_SKIN_ID, data.selectedCharacterSkinId)
             putString(KEY_SELECTED_TIMER_SKIN_ID, data.selectedTimerSkinId)
             putStringSet(KEY_PURCHASED_SKIN_IDS, data.purchasedSkinIds)
+            putBoolean(KEY_LIFETIME_PASS, data.hasLifetimePass)
         }.apply()
+    }
+
+    // ---- 즐겨찾기 (앱 전용 UI 상태 — 위젯 동기화와 무관하므로 TimerData에 넣지 않는다) ----
+
+    fun loadFavoriteSkinIds(): Set<String> =
+        prefs.getStringSet(KEY_FAVORITE_SKIN_IDS, emptySet())?.toSet() ?: emptySet()
+
+    /** 즐겨찾기 토글. 변경 후의 보유 여부(true=즐겨찾기됨)를 반환한다. */
+    fun setFavorite(skinId: String, favorite: Boolean) {
+        val next = loadFavoriteSkinIds().toMutableSet()
+        if (favorite) next.add(skinId) else next.remove(skinId)
+        prefs.edit().putStringSet(KEY_FAVORITE_SKIN_IDS, next).apply()
     }
 
     /** [load] → 변형 → [save]를 한 번에. 변형 결과를 그대로 반환한다. */
@@ -65,6 +81,7 @@ class TimerPreferences private constructor(context: Context) {
 
         private const val KEY_STATE = "state"
         private const val KEY_TARGET_END_ELAPSED = "target_end_elapsed"
+        private const val KEY_STATE_ENTERED_ELAPSED = "state_entered_elapsed"
         private const val KEY_REMAINING_AT_PAUSE = "remaining_at_pause"
         private const val KEY_TOTAL_MILLIS = "total_millis"
         private const val KEY_LAST_SET_MINUTES = "last_set_minutes"
@@ -75,6 +92,8 @@ class TimerPreferences private constructor(context: Context) {
         private const val KEY_SELECTED_CHARACTER_SKIN_ID = "selected_character_skin_id"
         private const val KEY_SELECTED_TIMER_SKIN_ID = "selected_timer_skin_id"
         private const val KEY_PURCHASED_SKIN_IDS = "purchased_skin_ids"
+        private const val KEY_LIFETIME_PASS = "has_lifetime_pass"
+        private const val KEY_FAVORITE_SKIN_IDS = "favorite_skin_ids"
 
         @Volatile
         private var instance: TimerPreferences? = null

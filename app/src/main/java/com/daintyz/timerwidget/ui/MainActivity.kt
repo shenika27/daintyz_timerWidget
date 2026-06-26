@@ -1,110 +1,110 @@
 package com.daintyz.timerwidget.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
-import android.widget.Button
-import android.widget.EditText
-import android.widget.RadioGroup
-import android.widget.TextView
-import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.core.content.ContextCompat
 import com.daintyz.timerwidget.R
-import com.daintyz.timerwidget.controller.TimerController
-import com.daintyz.timerwidget.data.TimerPreferences
-import com.daintyz.timerwidget.model.LayoutMode
-import com.daintyz.timerwidget.model.TimerState
+import com.daintyz.timerwidget.skin.SkinRepoUrls
+import com.daintyz.timerwidget.ui.compose.AppColors
+import com.daintyz.timerwidget.ui.compose.AppTheme
+import com.daintyz.timerwidget.ui.compose.SettingsScreen
+import com.daintyz.timerwidget.ui.compose.StoreScreen
+import com.daintyz.timerwidget.ui.compose.VaultScreen
 
 /**
- * 앱 메인 화면 (설계 문서 3-2, 2-1).
- *
- * - 증감 단위 자유 설정 (숫자패드 직접 입력)
- * - 현재 타이머 상태/남은 시간을 위젯과 동기화하여 표시
- * - 타이머 위/아래 배치 전환 토글 (변경 시 위젯 즉시 갱신)
- * - 스킨 선택 화면 진입점
- * - 첫 실행 시 알림 권한(POST_NOTIFICATIONS) 요청 (Android 13+)
+ * 앱 셸 (Compose). 하단 탭(보유/상점/설정)으로 세 화면을 전환한다. 첫 화면은 보유(창고).
+ * 위젯은 RemoteViews이므로 이 화면과 무관하다.
  */
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var tvState: TextView
-    private lateinit var tvRemaining: TextView
-    private lateinit var etStep: EditText
-    private lateinit var rgLayoutMode: RadioGroup
+    companion object {
+        const val EXTRA_NAV = "nav_tab"
+        const val NAV_VAULT = "vault"
+        const val NAV_STORE = "store"
+        const val NAV_SETTINGS = "settings"
+
+        /** 다른 화면에서 보유(창고) 탭으로 돌아오게 하는 인텐트. */
+        fun vaultIntent(context: Context): Intent =
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_NAV, NAV_VAULT)
+            }
+    }
 
     private val notificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* 결과 무시: 거부해도 앱은 동작 */ }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    /** 외부 인텐트가 요청한 탭 인덱스. onNewIntent로 갱신되면 Compose가 반영. */
+    private val requestedTab = mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        requestedTab.intValue = tabFromIntent(intent)
 
-        tvState = findViewById(R.id.tv_state)
-        tvRemaining = findViewById(R.id.tv_remaining)
-        etStep = findViewById(R.id.et_step)
-        rgLayoutMode = findViewById(R.id.rg_layout_mode)
-
-        findViewById<Button>(R.id.btn_save_step).setOnClickListener { saveStep() }
-        findViewById<Button>(R.id.btn_open_skins).setOnClickListener {
-            startActivity(Intent(this, SkinSelectActivity::class.java))
-        }
-        findViewById<Button>(R.id.btn_open_store).setOnClickListener {
-            startActivity(Intent(this, SkinStoreActivity::class.java))
-        }
-        rgLayoutMode.setOnCheckedChangeListener { _, checkedId ->
-            val mode = if (checkedId == R.id.rb_bottom) LayoutMode.BOTTOM else LayoutMode.TOP
-            TimerController.setLayoutMode(this, mode)
+        setContent {
+            AppTheme {
+                AppShell(
+                    requestedTab = requestedTab.intValue,
+                    onOpenDetail = ::openDetail,
+                )
+            }
         }
 
         requestNotificationPermissionIfNeeded()
     }
 
-    override fun onResume() {
-        super.onResume()
-        syncFromState()
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        requestedTab.intValue = tabFromIntent(intent)
     }
 
-    private fun syncFromState() {
-        val data = TimerPreferences.get(this).load()
-        tvState.text = stateLabel(data.state)
-        tvRemaining.text = formatMillis(data.remainingMillis(SystemClock.elapsedRealtime()))
-
-        if (etStep.text.isNullOrBlank()) {
-            etStep.setText(data.stepMinutes.toString())
-        }
-        // 리스너 재진입 방지를 위해 일시적으로 해제 후 설정
-        rgLayoutMode.setOnCheckedChangeListener(null)
-        rgLayoutMode.check(if (data.layoutMode == LayoutMode.BOTTOM) R.id.rb_bottom else R.id.rb_top)
-        rgLayoutMode.setOnCheckedChangeListener { _, checkedId ->
-            val mode = if (checkedId == R.id.rb_bottom) LayoutMode.BOTTOM else LayoutMode.TOP
-            TimerController.setLayoutMode(this, mode)
-        }
+    private fun tabFromIntent(intent: Intent): Int = when (intent.getStringExtra(EXTRA_NAV)) {
+        NAV_STORE -> 1
+        NAV_SETTINGS -> 2
+        else -> 0
     }
 
-    private fun saveStep() {
-        val step = etStep.text.toString().toIntOrNull()
-        if (step == null || step < 1) {
-            Toast.makeText(this, "1 이상의 숫자를 입력하세요", Toast.LENGTH_SHORT).show()
-            return
-        }
-        TimerController.setStepMinutes(this, step)
-        Toast.makeText(this, "증감 단위 ${step}분으로 저장됨", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun stateLabel(state: TimerState): String = when (state) {
-        TimerState.IDLE -> "정지"
-        TimerState.RUNNING -> "진행 중"
-        TimerState.PAUSED -> "일시정지"
-        TimerState.COMPLETE -> "완료"
-    }
-
-    private fun formatMillis(millis: Long): String {
-        val totalSeconds = (millis + 999) / 1000
-        return "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
+    /** VaultItem 상세/미리보기 화면(Compose 캐러셀)으로 이동. 보유=상태 스와이프, 미보유=prev 스와이프. */
+    private fun openDetail(item: VaultItem) {
+        startActivity(Intent(this, DetailActivity::class.java).apply {
+            putExtra(DetailActivity.EXTRA_SKIN_ID, item.id)
+            putExtra(DetailActivity.EXTRA_NAME, item.name)
+            putExtra(DetailActivity.EXTRA_OWNED, item.owned)
+            putExtra(DetailActivity.EXTRA_IS_FREE, item.isFree)
+            putExtra(DetailActivity.EXTRA_PRICE, item.price)
+            putExtra(DetailActivity.EXTRA_PRESTIGE, item.prestige)
+            if (item is VaultItem.Remote) {
+                putExtra(DetailActivity.EXTRA_ZIP_URL, item.entry.zipUrl)
+                putExtra(DetailActivity.EXTRA_PREVIEW_BASE, item.entry.baseUrl)
+            } else {
+                putExtra(DetailActivity.EXTRA_PREVIEW_BASE, SkinRepoUrls.ASSET_BASE)
+            }
+        })
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -112,8 +112,54 @@ class MainActivity : AppCompatActivity() {
         val granted = ContextCompat.checkSelfPermission(
             this, Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
-        if (!granted) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        if (!granted) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+}
+
+@Composable
+private fun AppShell(requestedTab: Int, onOpenDetail: (VaultItem) -> Unit) {
+    var selected by remember { mutableStateOf(requestedTab) }
+    LaunchedEffect(requestedTab) { selected = requestedTab }
+
+    Scaffold(
+        containerColor = AppColors.Background,
+        bottomBar = {
+            NavigationBar(containerColor = AppColors.Surface) {
+                NavTab(0, selected, R.drawable.ic_nav_vault, R.string.nav_vault) { selected = 0 }
+                NavTab(1, selected, R.drawable.ic_nav_store, R.string.nav_store) { selected = 1 }
+                NavTab(2, selected, R.drawable.ic_nav_settings, R.string.nav_settings) { selected = 2 }
+            }
+        },
+    ) { padding ->
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().padding(padding)) {
+            when (selected) {
+                1 -> StoreScreen(onOpenDetail = onOpenDetail)
+                2 -> SettingsScreen()
+                else -> VaultScreen(onOpenDetail = onOpenDetail)
+            }
         }
     }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.NavTab(
+    index: Int,
+    selected: Int,
+    iconRes: Int,
+    labelRes: Int,
+    onClick: () -> Unit,
+) {
+    NavigationBarItem(
+        selected = selected == index,
+        onClick = onClick,
+        icon = { Icon(painterResource(iconRes), contentDescription = null) },
+        label = { Text(androidx.compose.ui.res.stringResource(labelRes)) },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = AppColors.Primary,
+            selectedTextColor = AppColors.Primary,
+            unselectedIconColor = AppColors.Brown,
+            unselectedTextColor = AppColors.Brown,
+            indicatorColor = AppColors.CardCream,
+        ),
+    )
 }

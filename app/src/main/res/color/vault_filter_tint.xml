@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 필터 아이콘 틴트: 켜짐(selected)=흰색, 꺼짐=브라운 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/on_primary" android:state_selected="true" />
+    <item android:color="@color/placeholder_fg" />
+</selector>

@@ -9,20 +9,23 @@ data class Skin(
     val skinId: String,
     val name: String,
     val isFree: Boolean,
+    /**
+     * 프리스티지(희귀) 스킨 여부. true면 '업데이트 평생이용권'으로도 해금되지 않고 항상 개별구매다.
+     * skin.json의 "prestige" 플래그에서 파싱(없으면 false). 상점에서 별도 표시한다.
+     */
+    val prestige: Boolean,
+    /** 상점 히어로 카드 부제(한 줄 설명). 없으면 카드에서 부제 줄 생략. */
+    val description: String? = null,
+    /** 출시일("yyyy-MM-dd"). 상점 NEW 배지 판정 기준(출시일+7일 이내). 없으면 NEW 안 뜸. */
+    val createdAt: String? = null,
     val character: CharacterStates,
     /**
      * 타이머 영역 스킨 (설계: "기능=영역, 버튼=그림").
-     * skin.json에 timer 블록이 있으면 그 값으로, 없으면 기본 스킨(내장 박스/구분선/기호 버튼)으로 채워진다.
-     * 노스킨(투명·탭만)은 timer 블록에 showBox:false, buttonStyle:"none" 등을 명시해 표현한다.
+     * 모든 테마는 타이머 디자인을 포함한다(필수). skin.json에 timer 블록이 있으면 그 값으로,
+     * (내장/테스트 스킨처럼) 없으면 기본 스킨(내장 박스/구분선/기호 버튼)으로 채워진다.
      * (파싱 단계에서 항상 채워지므로 실질적으로 non-null이지만, 안전을 위해 nullable 유지)
      */
-    val timer: TimerSkin?,
-    /**
-     * skin.json에 timer 블록이 명시돼 있었는지. (true=이 테마가 '타이머 디자인'을 제공)
-     * [timer]는 블록이 없어도 기본값으로 채워지므로(렌더 폴백용), "타이머 탭 목록에 노출할지"는 이 플래그로 판단한다.
-     * 캐릭터만 있고 타이머 디자인이 없는 테마는 false → 타이머 적용 탭에 나오지 않는다.
-     */
-    val hasCustomTimer: Boolean
+    val timer: TimerSkin?
 )
 
 /**

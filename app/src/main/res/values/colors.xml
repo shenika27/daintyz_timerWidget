@@ -12,6 +12,10 @@
     <color name="placeholder_bg">#00000000</color>
     <color name="placeholder_fg">#7A5C34</color>
 
+    <!-- 보유목록(창고) 화면 -->
+    <color name="vault_bg">#FFFFFF</color>
+    <color name="vault_card_stroke">#1F3A2E1F</color>
+
     <!-- 타이머 디지털 박스 -->
     <color name="timer_box_fill">#FFFFFF</color>
     <color name="timer_box_border">#2B2B2B</color>

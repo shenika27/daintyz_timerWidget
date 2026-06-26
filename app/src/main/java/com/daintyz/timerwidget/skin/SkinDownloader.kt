@@ -30,10 +30,11 @@ object SkinDownloader {
      * {
      *   "baseUrl": "https://cdn.jsdelivr.net/gh/shenika27/daintyz_timer_characterList@main",
      *   "skins": [
-     *     { "skinId": "cha01", "name": "팡", "isFree": true, "hasTimer": true, "version": 1 }
+     *     { "skinId": "cha01", "name": "팡", "price": 0, "prestige": false, "version": 1 }
      *   ]
      * }
-     * hasTimer: 이 테마가 타이머 디자인을 제공하는지(상점 태그용). 생략 시 true.
+     * price: 가격(원). 0이거나 생략 시 무료. 모든 테마는 타이머 디자인을 포함한다(필수).
+     * prestige: 희귀(프리스티지) 스킨이면 true(생략 시 false). 평생이용권으로도 해금 안 됨 → 항상 개별구매. 상점 별도 표시.
      *
      * baseUrl을 생략하면 catalog.json이 위치한 폴더를 baseUrl로 사용한다.
      */
@@ -50,19 +51,20 @@ object SkinDownloader {
             (0 until arr.length()).map { i ->
                 arr.getJSONObject(i).let { obj ->
                     val skinId = obj.getString("skinId")
+                    // price를 단일 출처로 사용. 생략 시 0(무료). isFree는 여기서 도출.
+                    val price = obj.optInt("price", 0).coerceAtLeast(0)
                     RemoteSkinEntry(
                         skinId = skinId,
                         name = obj.getString("name"),
-                        isFree = obj.optBoolean("isFree", true),
+                        price = price,
+                        isFree = price <= 0,
+                        prestige = obj.optBoolean("prestige", false),
                         zipUrl = obj.optString("zipUrl").ifBlank { "$baseUrl/character_zip/$skinId.zip" },
                         thumbnailUrl = obj.optString("thumbnailUrl")
                             .ifBlank { SkinRepoUrls.themeThumb(skinId, baseUrl) },
-                        previewStopUrl = obj.optString("previewStopUrl")
-                            .ifBlank { SkinRepoUrls.previewStop(skinId, baseUrl) },
-                        previewRunningUrl = obj.optString("previewRunningUrl")
-                            .ifBlank { SkinRepoUrls.previewRunning(skinId, baseUrl) },
-                        hasTimer = obj.optBoolean("hasTimer", true),
-                        version = obj.optInt("version", 1)
+                        baseUrl = baseUrl,
+                        description = obj.optString("description").ifBlank { null },
+                        createdAt = obj.optString("createdAt").ifBlank { null }
                     )
                 }
             }
