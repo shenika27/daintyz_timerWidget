@@ -127,15 +127,15 @@ object SkinRepository {
         val json = context.assets.open("$SKINS_DIR/$dir/skin.json").use { stream ->
             JSONObject(stream.bufferedReader().readText())
         }
-        return parseSkinJson(json)
+        return parseSkinJson(json, bundled = true)
     }
 
     private fun parseSkinFromDir(dir: File): Skin {
         val json = JSONObject(File(dir, "skin.json").readText())
-        return parseSkinJson(json)
+        return parseSkinJson(json, bundled = false)
     }
 
-    private fun parseSkinJson(json: JSONObject): Skin {
+    private fun parseSkinJson(json: JSONObject, bundled: Boolean): Skin {
         val character = json.getJSONObject("character")
         return Skin(
             skinId = json.getString("skinId"),
@@ -144,6 +144,7 @@ object SkinRepository {
             prestige = json.optBoolean("prestige", false),
             description = json.optString("description").ifBlank { null },
             createdAt = json.optString("createdAt").ifBlank { null },
+            bundled = bundled,
             character = CharacterStates(
                 stop = parseFrameSet(character.getJSONObject("stop")),
                 running = parseRunningState(character.getJSONObject("running")),

@@ -18,6 +18,11 @@ data class Skin(
     val description: String? = null,
     /** 출시일("yyyy-MM-dd"). 상점 NEW 배지 판정 기준(출시일+7일 이내). 없으면 NEW 안 뜸. */
     val createdAt: String? = null,
+    /**
+     * 앱에 내장된 기본 에셋(assets/skins/) 스킨이면 true, 디자인 레포에서 다운로드한(filesDir) 스킨이면 false.
+     * 상점은 디자인 레포 항목만 노출하므로 내장 기본 스킨(예: cha01)은 bundled=true로 걸러낸다.
+     */
+    val bundled: Boolean = false,
     val character: CharacterStates,
     /**
      * 타이머 영역 스킨 (설계: "기능=영역, 버튼=그림").
