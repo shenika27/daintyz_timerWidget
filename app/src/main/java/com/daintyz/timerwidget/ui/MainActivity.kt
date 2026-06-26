@@ -121,6 +121,8 @@ class MainActivity : AppCompatActivity() {
 @Composable
 private fun AppShell(requestedTab: Int, onOpenDetail: (VaultItem, Boolean) -> Unit) {
     var selected by remember { mutableStateOf(requestedTab) }
+    // 기프트코드 해금 후 보유 탭으로 이동 시, 캐러셀을 이 스킨으로 포커싱하기 위한 1회성 신호.
+    var focusVaultSkinId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(requestedTab) { selected = requestedTab }
 
     Scaffold(
@@ -136,8 +138,15 @@ private fun AppShell(requestedTab: Int, onOpenDetail: (VaultItem, Boolean) -> Un
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().padding(padding)) {
             when (selected) {
                 1 -> StoreScreen(onOpenDetail = { onOpenDetail(it, true) })
-                2 -> SettingsScreen()
-                else -> VaultScreen(onOpenDetail = { onOpenDetail(it, false) })
+                2 -> SettingsScreen(onGoToVault = { skinId ->
+                    focusVaultSkinId = skinId
+                    selected = 0
+                })
+                else -> VaultScreen(
+                    onOpenDetail = { onOpenDetail(it, false) },
+                    focusSkinId = focusVaultSkinId,
+                    onFocusConsumed = { focusVaultSkinId = null },
+                )
             }
         }
     }

@@ -91,17 +91,28 @@ private const val CARD_TARGET_FILL = 0.80f
  */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
+fun VaultScreen(
+    onOpenDetail: (VaultItem) -> Unit,
+    focusSkinId: String? = null,
+    onFocusConsumed: () -> Unit = {},
+) {
     val context = LocalContext.current
 
+    // 진입 시점의 보유/적용 상태를 prefs에서 바로 읽어 초기화한다(탭 전환 진입 시에도 정렬이 흔들리지 않게).
+    val initialData = remember { TimerPreferences.get(context).load() }
     var localSkins by remember { mutableStateOf(SkinRepository.loadAllSkins(context)) }
     var catalog by remember { mutableStateOf(emptyList<RemoteSkinEntry>()) }
     var favoriteIds by remember { mutableStateOf(TimerPreferences.get(context).loadFavoriteSkinIds()) }
     // 별 토글은 카드만 즉시 바꾸고, 캐러셀 정렬은 의도적인 화면 재진입/필터 전환 때만 갱신한다.
     var orderingFavoriteIds by remember { mutableStateOf(favoriteIds) }
-    var purchased by remember { mutableStateOf(emptySet<String>()) }
-    var hasPass by remember { mutableStateOf(false) }
-    var appliedId by remember { mutableStateOf<String?>(null) }
+    var purchased by remember { mutableStateOf(initialData.purchasedSkinIds) }
+    var hasPass by remember { mutableStateOf(initialData.hasLifetimePass) }
+    var appliedId by remember {
+        mutableStateOf(
+            if (initialData.selectedCharacterSkinId == initialData.selectedTimerSkinId)
+                initialData.selectedCharacterSkinId else null
+        )
+    }
 
     var ownedOnly by rememberSaveable { mutableStateOf(false) }
     var favOnly by rememberSaveable { mutableStateOf(false) }
@@ -181,8 +192,12 @@ fun VaultScreen(onOpenDetail: (VaultItem) -> Unit) {
             val d = TimerPreferences.get(context).load()
             val appId = if (d.selectedCharacterSkinId == d.selectedTimerSkinId)
                 d.selectedCharacterSkinId else null
-            items.indexOfFirst { it.id == appId }.coerceAtLeast(0)
+            // 기프트코드 해금 직후 진입 시 해당 항목으로 포커싱, 아니면 적용 중 테마.
+            val target = focusSkinId ?: appId
+            items.indexOfFirst { it.id == target }.coerceAtLeast(0)
         }
+        // 포커스 요청은 1회성 — 초기 페이지에 반영했으면 비워 재진입 시 재포커싱되지 않게 한다.
+        LaunchedEffect(Unit) { if (focusSkinId != null) onFocusConsumed() }
         val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { items.size })
         val focused = items.getOrNull(pagerState.currentPage) ?: items.first()
 
