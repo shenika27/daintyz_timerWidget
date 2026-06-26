@@ -9,12 +9,16 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,11 +33,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.core.content.ContextCompat
 import com.daintyz.timerwidget.R
 import com.daintyz.timerwidget.skin.SkinRepoUrls
+import com.daintyz.timerwidget.ui.compose.AdaptiveContent
 import com.daintyz.timerwidget.ui.compose.AppColors
 import com.daintyz.timerwidget.ui.compose.AppTheme
 import com.daintyz.timerwidget.ui.compose.SettingsScreen
 import com.daintyz.timerwidget.ui.compose.StoreScreen
 import com.daintyz.timerwidget.ui.compose.VaultScreen
+import com.daintyz.timerwidget.ui.compose.isExpandedScreen
 
 /**
  * 앱 셸 (Compose). 하단 탭(보유/상점/설정)으로 세 화면을 전환한다. 첫 화면은 보유(창고).
@@ -124,18 +130,11 @@ private fun AppShell(requestedTab: Int, onOpenDetail: (VaultItem, Boolean) -> Un
     // 기프트코드 해금 후 보유 탭으로 이동 시, 캐러셀을 이 스킨으로 포커싱하기 위한 1회성 신호.
     var focusVaultSkinId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(requestedTab) { selected = requestedTab }
+    val expanded = isExpandedScreen()
 
-    Scaffold(
-        containerColor = AppColors.Background,
-        bottomBar = {
-            NavigationBar(containerColor = AppColors.Surface) {
-                NavTab(0, selected, R.drawable.ic_nav_vault, R.string.nav_vault) { selected = 0 }
-                NavTab(1, selected, R.drawable.ic_nav_store, R.string.nav_store) { selected = 1 }
-                NavTab(2, selected, R.drawable.ic_nav_settings, R.string.nav_settings) { selected = 2 }
-            }
-        },
-    ) { padding ->
-        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().padding(padding)) {
+    @Composable
+    fun MainContent() {
+        Box(Modifier.fillMaxSize()) {
             when (selected) {
                 1 -> StoreScreen(onOpenDetail = { onOpenDetail(it, true) })
                 2 -> SettingsScreen(onGoToVault = { skinId ->
@@ -148,6 +147,30 @@ private fun AppShell(requestedTab: Int, onOpenDetail: (VaultItem, Boolean) -> Un
                     onFocusConsumed = { focusVaultSkinId = null },
                 )
             }
+        }
+    }
+
+    if (expanded) {
+        Row(Modifier.fillMaxSize()) {
+            NavigationRail(containerColor = AppColors.Surface) {
+                NavRailTab(0, selected, R.drawable.ic_nav_vault, R.string.nav_vault) { selected = 0 }
+                NavRailTab(1, selected, R.drawable.ic_nav_store, R.string.nav_store) { selected = 1 }
+                NavRailTab(2, selected, R.drawable.ic_nav_settings, R.string.nav_settings) { selected = 2 }
+            }
+            AdaptiveContent(modifier = Modifier.weight(1f)) { MainContent() }
+        }
+    } else {
+        Scaffold(
+            containerColor = AppColors.Background,
+            bottomBar = {
+                NavigationBar(containerColor = AppColors.Surface) {
+                    NavTab(0, selected, R.drawable.ic_nav_vault, R.string.nav_vault) { selected = 0 }
+                    NavTab(1, selected, R.drawable.ic_nav_store, R.string.nav_store) { selected = 1 }
+                    NavTab(2, selected, R.drawable.ic_nav_settings, R.string.nav_settings) { selected = 2 }
+                }
+            },
+        ) { padding ->
+            AdaptiveContent(modifier = Modifier.padding(padding)) { MainContent() }
         }
     }
 }
@@ -172,5 +195,21 @@ private fun androidx.compose.foundation.layout.RowScope.NavTab(
             unselectedTextColor = AppColors.Brown,
             indicatorColor = AppColors.CardCream,
         ),
+    )
+}
+
+@Composable
+private fun NavRailTab(
+    index: Int,
+    selected: Int,
+    iconRes: Int,
+    labelRes: Int,
+    onClick: () -> Unit,
+) {
+    NavigationRailItem(
+        selected = selected == index,
+        onClick = onClick,
+        icon = { Icon(painterResource(iconRes), contentDescription = null) },
+        label = { Text(androidx.compose.ui.res.stringResource(labelRes)) },
     )
 }

@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import com.daintyz.timerwidget.skin.SkinRepoUrls
+import com.daintyz.timerwidget.ui.compose.AdaptiveContent
 import com.daintyz.timerwidget.ui.compose.AppTheme
 import com.daintyz.timerwidget.ui.compose.DetailScreen
 
@@ -44,19 +45,21 @@ class DetailActivity : AppCompatActivity() {
 
         setContent {
             AppTheme {
-                DetailScreen(
-                    skinId = skinId,
-                    name = name,
-                    initialOwned = owned,
-                    isFree = isFree,
-                    price = price,
-                    prestige = prestige,
-                    previewBase = previewBase,
-                    zipUrl = zipUrl,
-                    saleExpired = saleExpired,
-                    showWishlist = openedFromStore,
-                    onBack = { finish() },
-                )
+                AdaptiveContent {
+                    DetailScreen(
+                        skinId = skinId,
+                        name = name,
+                        initialOwned = owned,
+                        isFree = isFree,
+                        price = price,
+                        prestige = prestige,
+                        previewBase = previewBase,
+                        zipUrl = zipUrl,
+                        saleExpired = saleExpired,
+                        showWishlist = openedFromStore,
+                        onBack = { finish() },
+                    )
+                }
             }
         }
     }
