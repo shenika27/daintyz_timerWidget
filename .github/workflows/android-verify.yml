@@ -36,6 +36,13 @@ jobs:
       - name: Assemble debug APK, run lint, and run unit tests
         run: bash ./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest --stacktrace
 
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+
       - name: Upload lint report
         if: always()
         uses: actions/upload-artifact@v4
