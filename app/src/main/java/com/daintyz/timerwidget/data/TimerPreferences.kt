@@ -110,7 +110,7 @@ class TimerPreferences private constructor(context: Context) {
         const val DEFAULT_SECONDS = DEFAULT_MINUTES * SECONDS_PER_MINUTE
         const val DEFAULT_STEP_MINUTES = 1
         const val DEFAULT_STEP_SECONDS = DEFAULT_STEP_MINUTES * SECONDS_PER_MINUTE
-        const val DEFAULT_SKIN_ID = "potato"
+        const val DEFAULT_SKIN_ID = "cha01"
 
         private const val KEY_STATE = "state"
         private const val KEY_TARGET_END_ELAPSED = "target_end_elapsed"
