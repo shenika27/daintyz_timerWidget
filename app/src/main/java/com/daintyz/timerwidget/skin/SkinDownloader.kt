@@ -44,12 +44,28 @@ object SkinDownloader {
         conn.readTimeout = 10_000
         return try {
             val text = conn.inputStream.bufferedReader().use { it.readText() }
-            val json = JSONObject(text)
+            // index 자체가 깨진 경우(JSON 문법 오류/skins 누락/비-JSON 응답)는 개발자 디스코드로 알린다.
+            // 네트워크 오프라인/타임아웃은 JSONException이 아니라 위 readText에서 throw되므로 알림 대상이 아니다.
+            val json = try {
+                JSONObject(text)
+            } catch (e: org.json.JSONException) {
+                DevAlert.reportCatalogError(url, text, e)
+                throw e
+            }
             // baseUrl 미지정 시 catalog.json이 있는 폴더로 폴백 (.../@main/catalog.json → .../@main)
             val baseUrl = json.optString("baseUrl").ifBlank { url.substringBeforeLast('/') }
-            val arr = json.getJSONArray("skins")
-            (0 until arr.length()).map { i ->
-                arr.getJSONObject(i).let { obj ->
+            val arr = try {
+                json.getJSONArray("skins")
+            } catch (e: org.json.JSONException) {
+                DevAlert.reportCatalogError(url, text, e)
+                throw e
+            }
+            // 항목 단위로 격리 파싱한다. 디자인레포에서 특정 테마 항목 하나가 깨져도
+            // (필수 필드 누락/오타 등) 그 항목만 스킵하고 정상 항목은 그대로 노출 — 카탈로그
+            // 전체가 증발하는 all-or-nothing 실패를 막는다.
+            (0 until arr.length()).mapNotNull { i ->
+                runCatching {
+                    val obj = arr.getJSONObject(i)
                     val skinId = obj.getString("skinId")
                     // price를 단일 출처로 사용. 생략 시 0(무료). isFree는 여기서 도출.
                     val price = obj.optInt("price", 0).coerceAtLeast(0)
@@ -66,7 +82,10 @@ object SkinDownloader {
                         description = obj.optString("description").ifBlank { null },
                         createdAt = obj.optString("createdAt").ifBlank { null }
                     )
-                }
+                }.onFailure {
+                    Log.e(TAG, "카탈로그 항목 파싱 실패(인덱스 $i) — 스킵", it)
+                    DevAlert.reportEntryError(url, i, it)
+                }.getOrNull()
             }
         } finally {
             conn.disconnect()
