@@ -124,7 +124,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
 
         // ── 타이머 ──
         SectionHeader("타이머")
-        SettingRow("한 번에 조절") {
+        SettingRow("시간 조절") {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 CompactField(stepMin, { stepMin = it }, width = 48.dp, keyboardType = KeyboardType.Number, textAlign = TextAlign.Center)
                 Text("분", color = AppColors.Brown, fontSize = 13.sp)
@@ -147,9 +147,9 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                 }
             }
         }
-        SettingRow("위젯 배치") {
+        SettingRow("타이머 위치") {
             SegmentedToggle(
-                options = listOf("타이머 위", "타이머 아래"),
+                options = listOf("위", "아래"),
                 selectedIndex = if (layoutMode == LayoutMode.TOP) 0 else 1,
             ) { idx ->
                 val mode = if (idx == 0) LayoutMode.TOP else LayoutMode.BOTTOM
