@@ -22,9 +22,9 @@ object SkinDownloader {
      * catalog.json을 가져온다. 블로킹 호출 — 반드시 백그라운드 스레드에서 실행.
      *
      * 디자인레포 폴더 규칙(skinId 기준 자동 유추 — SkinRepoUrls):
-     *   {baseUrl}/character_zip/{skinId}.zip       ← 캐릭터+타이머 한 세트 zip
-     *   {baseUrl}/preview/{skinId}/thumb.png       ← 테마 썸네일(상점/타이머 탭 공용)
-     *   {baseUrl}/preview/{skinId}/prev01.png …    ← 미리보기 팝업(prev01,02,03… 가변)
+     *   {baseUrl}/character/zip/{skinId}.zip          ← 캐릭터+타이머 한 세트 zip
+     *   {baseUrl}/character/preview/{skinId}/thumb.png ← 테마 썸네일(상점/타이머 탭 공용)
+     *   {baseUrl}/character/preview/{skinId}/prev01.png … ← 미리보기 팝업(prev01,02,03… 가변)
      *
      * catalog.json 형식 (zipUrl/thumbnailUrl은 생략 가능, 생략 시 위 규칙으로 유추):
      * {
@@ -75,7 +75,7 @@ object SkinDownloader {
                         price = price,
                         isFree = price <= 0,
                         prestige = obj.optBoolean("prestige", false),
-                        zipUrl = obj.optString("zipUrl").ifBlank { "$baseUrl/character_zip/$skinId.zip" },
+                        zipUrl = obj.optString("zipUrl").ifBlank { "$baseUrl/character/zip/$skinId.zip" },
                         thumbnailUrl = obj.optString("thumbnailUrl")
                             .ifBlank { SkinRepoUrls.themeThumb(skinId, baseUrl) },
                         baseUrl = baseUrl,

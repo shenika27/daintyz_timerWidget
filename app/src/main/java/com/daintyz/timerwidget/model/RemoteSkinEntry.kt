@@ -17,7 +17,7 @@ data class RemoteSkinEntry(
     /** 프리스티지(희귀) 스킨 여부. 평생이용권으로도 해금 안 됨(항상 개별구매). 상점에서 별도 표시. */
     val prestige: Boolean = false,
     val zipUrl: String,
-    /** 테마 썸네일 PNG URL (preview/{id}/thumb.png) — 상점/타이머 탭 공용. */
+    /** 테마 썸네일 PNG URL (character/preview/{id}/thumb.png) — 상점/타이머 탭 공용. */
     val thumbnailUrl: String,
     /** 미리보기 에셋 베이스 URL(catalog baseUrl 또는 jsDelivr ASSET_BASE). 상세화면이 prevNN.png를 유추하는 기준. */
     val baseUrl: String,

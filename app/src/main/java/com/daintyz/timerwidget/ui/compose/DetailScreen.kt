@@ -85,7 +85,7 @@ private fun stateLabel(state: TimerState): String = stringResource(
  * - 보유: '실제 위젯'을 그대로 띄운 인터랙티브 미리보기(샌드박스). +/- · 시작/일시정지 · 정지를
  *   직접 눌러 카운트다운/애니메이션을 그 자리에서 체험한다(실제 홈 위젯/타이머 상태엔 영향 없음).
  *   하단 캡션 = 현재 상태명, 하단 버튼 = 적용하기/적용 중.
- * - 미보유: preview/{id}/prevNN.png 캐러셀(하단 = n/총). 하단 버튼 = 구매하기(가격) / (무료면 다운로드).
+ * - 미보유: character/preview/{id}/prevNN.png 캐러셀(하단 = n/총). 하단 버튼 = 구매하기(가격) / (무료면 다운로드).
  *
  * 다운로드로 보유 전환되면 그 자리에서 인터랙티브 미리보기로 바뀐다.
  */
@@ -490,7 +490,7 @@ private fun startDownload(
         price = price,
         isFree = isFree,
         prestige = prestige,
-        zipUrl = zipUrl ?: "$previewBase/character_zip/$skinId.zip",
+        zipUrl = zipUrl ?: "$previewBase/character/zip/$skinId.zip",
         thumbnailUrl = SkinRepoUrls.themeThumb(skinId, previewBase),
         baseUrl = previewBase,
     )
