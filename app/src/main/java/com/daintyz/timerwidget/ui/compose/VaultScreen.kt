@@ -66,17 +66,16 @@ import com.daintyz.timerwidget.model.TimerState
 import com.daintyz.timerwidget.skin.FrameAnimationController
 import com.daintyz.timerwidget.skin.SkinAvailabilityChecker
 import com.daintyz.timerwidget.skin.SkinDownloader
+import com.daintyz.timerwidget.skin.SkinRepoUrls
 import com.daintyz.timerwidget.skin.SkinRepository
 import com.daintyz.timerwidget.ui.SaleStatus
 import com.daintyz.timerwidget.ui.VaultItem
+import com.daintyz.timerwidget.ui.priceLabel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.absoluteValue
-
-private const val CATALOG_URL =
-    "https://raw.githubusercontent.com/shenika27/daintyz_timer_characterList/main/catalog.json"
 
 /**
  * 캐러셀 카드에서 캐릭터(불투명 영역)가 차지할 목표 비율(카드 변 대비). '먹' 정도의 여유 있는 크기.
@@ -143,7 +142,7 @@ fun VaultScreen(
 
     LaunchedEffect(Unit) {
         val entries = withContext(Dispatchers.IO) {
-            runCatching { SkinDownloader.fetchCatalog(CATALOG_URL) }.getOrNull()
+            runCatching { SkinDownloader.fetchCatalog(SkinRepoUrls.CATALOG_URL) }.getOrNull()
         }
         if (entries != null) catalog = entries
     }
@@ -466,7 +465,7 @@ private fun VaultCard(
             )
         } else {
             Text(
-                text = priceLabel(item),
+                text = priceLabel(item, prestigeMark = true),
                 color = AppColors.TextPrimary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
@@ -646,9 +645,4 @@ private fun ActionButtons(
         Text(stringResource(R.string.vault_preview), color = AppColors.Brown, fontSize = 15.sp)
     }
     androidx.compose.foundation.layout.Spacer(Modifier.height(48.dp))
-}
-
-private fun priceLabel(item: VaultItem): String {
-    val base = if (item.isFree || item.price <= 0) "무료" else "%,d원".format(item.price)
-    return if (item.prestige) "✦ $base" else base
 }

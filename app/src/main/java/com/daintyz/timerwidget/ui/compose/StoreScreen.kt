@@ -55,6 +55,7 @@ import com.daintyz.timerwidget.skin.SkinRepoUrls
 import com.daintyz.timerwidget.skin.SkinRepository
 import com.daintyz.timerwidget.ui.SaleStatus
 import com.daintyz.timerwidget.ui.VaultItem
+import com.daintyz.timerwidget.ui.priceLabel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -246,7 +247,7 @@ private fun StoreHeroCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 if (item.saleStatus == SaleStatus.EXPIRED) {
-                    Badge("기간만료", AppColors.OnSurface, AppColors.Stroke)
+                    Badge(stringResource(R.string.sale_expired), AppColors.OnSurface, AppColors.Stroke)
                 }
                 if (item.isNew) {
                     Badge(stringResource(R.string.skin_tag_new), AppColors.OnPrimary, AppColors.Primary)
@@ -307,7 +308,7 @@ private fun StoreHeroCard(
                     fontWeight = FontWeight.Bold,
                 )
                 item.saleStatus == SaleStatus.EXPIRED -> Text(
-                    text = "기간만료",
+                    text = stringResource(R.string.sale_expired),
                     color = AppColors.Brown,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
@@ -348,5 +349,3 @@ private fun Badge(text: String, fg: Color, bg: Color) {
     )
 }
 
-private fun priceLabel(item: VaultItem): String =
-    if (item.isFree || item.price <= 0) "무료" else "%,d원".format(item.price)

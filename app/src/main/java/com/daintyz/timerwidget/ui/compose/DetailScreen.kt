@@ -332,7 +332,7 @@ fun DetailScreen(
         ) {
             val label = when {
                 owned -> stringResource(if (applied) R.string.detail_applied else R.string.detail_apply)
-                saleExpired -> "기간만료"
+                saleExpired -> stringResource(R.string.sale_expired)
                 downloading -> stringResource(R.string.skin_btn_downloading)
                 downloadFailed -> stringResource(R.string.skin_btn_retry)
                 else -> buyLabel

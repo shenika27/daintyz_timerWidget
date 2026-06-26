@@ -66,6 +66,16 @@ sealed interface VaultItem {
     }
 }
 
+/**
+ * 가격 라벨. 무료/미설정이면 "무료", 아니면 "12,000원" 형식.
+ * [prestigeMark]=true면 프리스티지 테마 가격 앞에 ✦ 를 붙인다(창고 카드 전용 표기).
+ * Store/Vault 양쪽에서 쓰던 중복 구현을 단일 출처로 모은 것.
+ */
+fun priceLabel(item: VaultItem, prestigeMark: Boolean = false): String {
+    val base = if (item.isFree || item.price <= 0) "무료" else "%,d원".format(item.price)
+    return if (prestigeMark && item.prestige) "✦ $base" else base
+}
+
 /** 한정구매 기간 판정 결과. */
 enum class SaleStatus {
     /** 구매 가능(기간 내이거나 기간 제한 없음). */ ACTIVE,
