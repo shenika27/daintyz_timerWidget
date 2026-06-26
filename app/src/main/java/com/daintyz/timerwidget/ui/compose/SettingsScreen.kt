@@ -22,8 +22,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
@@ -67,10 +69,13 @@ import kotlinx.coroutines.withContext
  * 토글/세그먼트/딥링크 등 행 성격에 맞는 컨트롤을 우측에 둔다.
  */
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { TimerPreferences.get(context) }
+
+    // 기프트코드 해금 성공 시 띄울 다이얼로그 대상 (skinId to name). null이면 닫힘.
+    var unlockedSkin by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     var stepMin by remember { mutableStateOf(TextFieldValue("")) }
     var stepSec by remember { mutableStateOf(TextFieldValue("")) }
@@ -207,16 +212,16 @@ fun SettingsScreen() {
                         redeeming = true
                         val result = withContext(Dispatchers.IO) { GiftCodeRedeemer.redeem(context, code) }
                         redeeming = false
-                        val msg = when (result) {
+                        when (result) {
                             is GiftCodeRedeemer.Result.Success -> {
                                 giftCode = TextFieldValue("")
-                                "${result.name} 해금 완료!"
+                                unlockedSkin = result.skinId to result.name // 다이얼로그로 후속 안내
                             }
-                            is GiftCodeRedeemer.Result.AlreadyOwned -> "이미 보유한 테마예요 (${result.name})"
-                            GiftCodeRedeemer.Result.Invalid -> "유효하지 않은 코드예요"
-                            GiftCodeRedeemer.Result.Error -> "네트워크 오류 — 잠시 후 다시 시도하세요"
+                            is GiftCodeRedeemer.Result.AlreadyOwned ->
+                                toast(context, "이미 보유한 테마예요 (${result.name})")
+                            GiftCodeRedeemer.Result.Invalid -> toast(context, "유효하지 않은 코드예요")
+                            GiftCodeRedeemer.Result.Error -> toast(context, "네트워크 오류 — 잠시 후 다시 시도하세요")
                         }
-                        toast(context, msg)
                     }
                 }
             }
@@ -224,6 +229,27 @@ fun SettingsScreen() {
         SettingRow("앱 버전") {
             Text(if (versionName.isNotBlank()) "v$versionName" else "—", color = AppColors.Brown, fontSize = 13.sp)
         }
+    }
+
+    // 기프트코드 해금 성공 안내 → 보유 목록(해금 항목 포커싱)으로 이동.
+    unlockedSkin?.let { (skinId, name) ->
+        AlertDialog(
+            onDismissRequest = { unlockedSkin = null },
+            title = { Text("$name 해금 완료!", color = AppColors.TextPrimary) },
+            text = { Text("보유 목록에서 확인하시겠습니까?", color = AppColors.Brown) },
+            containerColor = AppColors.Background,
+            confirmButton = {
+                TextButton(onClick = {
+                    unlockedSkin = null
+                    onGoToVault(skinId)
+                }) { Text("보유 목록으로", color = AppColors.Primary, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { unlockedSkin = null }) {
+                    Text("닫기", color = AppColors.Brown)
+                }
+            },
+        )
     }
 }
 
