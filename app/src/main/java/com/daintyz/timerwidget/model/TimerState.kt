@@ -38,7 +38,7 @@ enum class LayoutMode(val key: String) {
  * @param remainingMillisAtPause PAUSED일 때 멈춘 남은 시간(ms).
  * @param totalMillis 현재 타이머의 전체 길이(ms). 진행률 계산용.
  * @param lastSetSeconds 완료/리셋 후 복귀 시 유지할 직전 설정 시간(초).
- * @param stepMinutes 위젯 +/- 증감 단위(분). 앱에서 자유롭게 변경 (설계 문서 3-2).
+ * @param stepSeconds 위젯 +/- 증감 단위(초, 분+초 조합). 1분 이상에서 이 값의 배수 격자로 스냅. 앱에서 자유롭게 변경 (설계 문서 3-2).
  * @param layoutMode 위젯 배치 모드.
  * @param selectedCharacterSkinId 캐릭터 영역에 적용된 스킨(테마) id.
  * @param selectedTimerSkinId 타이머 영역에 적용된 스킨(테마) id. 캐릭터와 독립적으로 선택된다.
@@ -52,7 +52,7 @@ data class TimerData(
     val remainingMillisAtPause: Long,
     val totalMillis: Long,
     val lastSetSeconds: Int,
-    val stepMinutes: Int,
+    val stepSeconds: Int,
     val layoutMode: LayoutMode,
     val selectedCharacterSkinId: String,
     val selectedTimerSkinId: String,

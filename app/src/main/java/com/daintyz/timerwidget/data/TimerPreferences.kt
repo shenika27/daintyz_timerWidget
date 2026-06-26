@@ -28,7 +28,12 @@ class TimerPreferences private constructor(context: Context) {
         } else {
             prefs.getInt(KEY_LAST_SET_MINUTES, DEFAULT_MINUTES) * SECONDS_PER_MINUTE
         },
-        stepMinutes = prefs.getInt(KEY_STEP_MINUTES, DEFAULT_STEP_MINUTES),
+        // 초 단위 키가 없는 기존 설치본은 기존 분 단위 step을 초로 변환해 유지한다.
+        stepSeconds = if (prefs.contains(KEY_STEP_SECONDS)) {
+            prefs.getInt(KEY_STEP_SECONDS, DEFAULT_STEP_SECONDS)
+        } else {
+            prefs.getInt(KEY_STEP_MINUTES, DEFAULT_STEP_MINUTES) * SECONDS_PER_MINUTE
+        },
         layoutMode = LayoutMode.fromKey(prefs.getString(KEY_LAYOUT_MODE, null)),
         // 캐릭터/타이머 독립 선택. 구버전(단일 selected_skin_id)에서 올라온 경우 그 값을 양쪽에 복사해 마이그레이션.
         selectedCharacterSkinId = prefs.getString(KEY_SELECTED_CHARACTER_SKIN_ID, null)
@@ -49,7 +54,7 @@ class TimerPreferences private constructor(context: Context) {
             putLong(KEY_REMAINING_AT_PAUSE, data.remainingMillisAtPause)
             putLong(KEY_TOTAL_MILLIS, data.totalMillis)
             putInt(KEY_LAST_SET_SECONDS, data.lastSetSeconds)
-            putInt(KEY_STEP_MINUTES, data.stepMinutes)
+            putInt(KEY_STEP_SECONDS, data.stepSeconds)
             putString(KEY_LAYOUT_MODE, data.layoutMode.key)
             putString(KEY_SELECTED_CHARACTER_SKIN_ID, data.selectedCharacterSkinId)
             putString(KEY_SELECTED_TIMER_SKIN_ID, data.selectedTimerSkinId)
@@ -104,6 +109,7 @@ class TimerPreferences private constructor(context: Context) {
         const val DEFAULT_MINUTES = 10
         const val DEFAULT_SECONDS = DEFAULT_MINUTES * SECONDS_PER_MINUTE
         const val DEFAULT_STEP_MINUTES = 1
+        const val DEFAULT_STEP_SECONDS = DEFAULT_STEP_MINUTES * SECONDS_PER_MINUTE
         const val DEFAULT_SKIN_ID = "potato"
 
         private const val KEY_STATE = "state"
@@ -113,7 +119,9 @@ class TimerPreferences private constructor(context: Context) {
         private const val KEY_TOTAL_MILLIS = "total_millis"
         private const val KEY_LAST_SET_MINUTES = "last_set_minutes"
         private const val KEY_LAST_SET_SECONDS = "last_set_seconds"
+        /** 구버전 분 단위 step 키. 읽기 전용(마이그레이션 폴백)으로만 남겨둔다. */
         private const val KEY_STEP_MINUTES = "step_minutes"
+        private const val KEY_STEP_SECONDS = "step_seconds"
         private const val KEY_LAYOUT_MODE = "layout_mode"
         /** 구버전 단일 선택 키. 읽기 전용(마이그레이션 폴백)으로만 남겨둔다. */
         private const val KEY_SELECTED_SKIN_ID = "selected_skin_id"

@@ -1,10 +1,10 @@
 package com.daintyz.timerwidget.ui.compose
 
 import android.content.Intent
-import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,16 +12,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -38,11 +39,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -50,7 +55,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.daintyz.timerwidget.controller.TimerController
 import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.LayoutMode
-import com.daintyz.timerwidget.model.TimerState
 import com.daintyz.timerwidget.notification.TimerNotifications
 import com.daintyz.timerwidget.skin.GiftCodeRedeemer
 import com.daintyz.timerwidget.widget.WidgetUpdater
@@ -68,9 +72,8 @@ fun SettingsScreen() {
     val scope = rememberCoroutineScope()
     val prefs = remember { TimerPreferences.get(context) }
 
-    var stateLabel by remember { mutableStateOf("") }
-    var remaining by remember { mutableStateOf("") }
-    var step by remember { mutableStateOf(TextFieldValue("")) }
+    var stepMin by remember { mutableStateOf(TextFieldValue("")) }
+    var stepSec by remember { mutableStateOf(TextFieldValue("")) }
     var layoutMode by remember { mutableStateOf(LayoutMode.TOP) }
     var completeSound by remember { mutableStateOf(prefs.isCompleteSoundEnabled()) }
     var vibrate by remember { mutableStateOf(prefs.isVibrateEnabled()) }
@@ -86,16 +89,10 @@ fun SettingsScreen() {
 
     fun sync() {
         val data = prefs.load()
-        stateLabel = when (data.state) {
-            TimerState.IDLE -> "정지"
-            TimerState.RUNNING -> "진행 중"
-            TimerState.PAUSED -> "일시정지"
-            TimerState.COMPLETE -> "완료"
+        if (stepMin.text.isBlank() && stepSec.text.isBlank()) {
+            stepMin = TextFieldValue((data.stepSeconds / 60).toString())
+            stepSec = TextFieldValue((data.stepSeconds % 60).toString())
         }
-        val ms = data.remainingMillis(SystemClock.elapsedRealtime())
-        val totalSeconds = (ms + 999) / 1000
-        remaining = "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
-        if (step.text.isBlank()) step = TextFieldValue(data.stepMinutes.toString())
         layoutMode = data.layoutMode
     }
 
@@ -116,40 +113,27 @@ fun SettingsScreen() {
     ) {
         Text("설정", color = AppColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
-        // 현재 상태 카드.
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(AppColors.CardCream)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-        ) {
-            Text("현재 상태", color = AppColors.Brown, fontSize = 12.sp)
-            Text(
-                "$stateLabel · $remaining",
-                color = AppColors.TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold,
-            )
-        }
-
         // ── 타이머 ──
         SectionHeader("타이머")
         SettingRow("증감 단위") {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedTextField(
-                    value = step,
-                    onValueChange = { step = it },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.width(76.dp),
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                CompactField(stepMin, { stepMin = it }, width = 48.dp, keyboardType = KeyboardType.Number, textAlign = TextAlign.Center)
+                Text("분", color = AppColors.Brown, fontSize = 13.sp)
+                CompactField(stepSec, { stepSec = it }, width = 48.dp, keyboardType = KeyboardType.Number, textAlign = TextAlign.Center)
+                Text("초", color = AppColors.Brown, fontSize = 13.sp)
                 SmallButton("저장") {
-                    val v = step.text.toIntOrNull()
-                    if (v == null || v < 1) {
-                        toast(context, "1 이상의 숫자를 입력하세요")
+                    val m = stepMin.text.toIntOrNull() ?: 0
+                    val s = stepSec.text.toIntOrNull() ?: 0
+                    val total = m * 60 + s
+                    if (total < 5) {
+                        toast(context, "증감 단위는 5초 이상으로 설정하세요")
                     } else {
-                        TimerController.setStepMinutes(context, v)
-                        toast(context, "증감 단위 ${v}분으로 저장됨")
+                        TimerController.setStepSeconds(context, total)
+                        // 클램프된 실제 저장값으로 입력칸을 다시 동기화.
+                        val saved = TimerPreferences.get(context).load().stepSeconds
+                        stepMin = TextFieldValue((saved / 60).toString())
+                        stepSec = TextFieldValue((saved % 60).toString())
+                        toast(context, "증감 단위 ${saved / 60}분 ${saved % 60}초로 저장됨")
                     }
                 }
             }
@@ -216,13 +200,7 @@ fun SettingsScreen() {
         }
         SettingRow("기프트코드") {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedTextField(
-                    value = giftCode,
-                    onValueChange = { giftCode = it },
-                    singleLine = true,
-                    enabled = !redeeming,
-                    modifier = Modifier.width(120.dp),
-                )
+                CompactField(giftCode, { giftCode = it }, width = 120.dp, enabled = !redeeming)
                 SmallButton(if (redeeming) "확인 중…" else "해금", enabled = !redeeming && giftCode.text.isNotBlank()) {
                     val code = giftCode.text
                     scope.launch {
@@ -285,6 +263,39 @@ private fun SettingRow(
         }
         Box(contentAlignment = Alignment.CenterEnd) { trailing() }
     }
+}
+
+/** 버튼 높이에 맞춘 컴팩트 입력칸(약 42dp). 기본 OutlinedTextField(56dp)보다 낮다. */
+@Composable
+private fun CompactField(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    width: Dp,
+    enabled: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    textAlign: TextAlign = TextAlign.Start,
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        enabled = enabled,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        textStyle = TextStyle(color = AppColors.TextPrimary, fontSize = 15.sp, textAlign = textAlign),
+        cursorBrush = SolidColor(AppColors.Primary),
+        modifier = Modifier
+            .width(width)
+            .height(42.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Stroke, RoundedCornerShape(10.dp)),
+        decorationBox = { inner ->
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                contentAlignment = if (textAlign == TextAlign.Center) Alignment.Center else Alignment.CenterStart,
+            ) { inner() }
+        },
+    )
 }
 
 @Composable

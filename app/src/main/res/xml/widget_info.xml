@@ -15,4 +15,6 @@
     android:resizeMode="none"
     android:updatePeriodMillis="0"
     android:widgetCategory="home_screen"
+    android:configure="com.daintyz.timerwidget.ui.WidgetConfigureActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional"
     android:description="@string/widget_description" />

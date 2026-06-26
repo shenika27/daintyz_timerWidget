@@ -23,14 +23,18 @@ object TimerController {
     private const val MIN_SECONDS = 10
     private const val ONE_MINUTE_SECONDS = 60
     private const val SUB_MINUTE_STEP_SECONDS = 10
+    private const val MIN_STEP_SECONDS = 5 // 증감 단위 최소값(초)
 
     // ---- 정지 상태에서 시간 증감 ----
 
+    // 1분 미만은 10초 단위. 1분 이상은 "설정 배수의 격자"에 스냅한다.
+    // 예) 배수 5분: … 50초 → 1:00 → 5:00 → 10:00 (6:00 같은 어중간한 값이 안 생김).
     fun increment(context: Context) = mutateIdleSeconds(context) { currentSeconds ->
         if (currentSeconds < ONE_MINUTE_SECONDS) {
             currentSeconds + SUB_MINUTE_STEP_SECONDS
         } else {
-            currentSeconds + currentStepSeconds(context)
+            val step = currentStepSeconds(context)
+            ((currentSeconds / step) + 1) * step // 다음 배수로 올림 스냅
         }
     }
 
@@ -38,12 +42,14 @@ object TimerController {
         if (currentSeconds <= ONE_MINUTE_SECONDS) {
             currentSeconds - SUB_MINUTE_STEP_SECONDS
         } else {
-            currentSeconds - currentStepSeconds(context)
+            val step = currentStepSeconds(context)
+            val prev = ((currentSeconds - 1) / step) * step // 이전 배수로 내림 스냅
+            if (prev < ONE_MINUTE_SECONDS) ONE_MINUTE_SECONDS else prev // 1분 미만으로는 1:00에 멈춤(그 아래는 10초 단위)
         }
     }
 
     private fun currentStepSeconds(context: Context): Int =
-        TimerPreferences.get(context).load().stepMinutes.coerceAtLeast(1) * ONE_MINUTE_SECONDS
+        TimerPreferences.get(context).load().stepSeconds.coerceAtLeast(MIN_STEP_SECONDS)
 
     private inline fun mutateIdleSeconds(context: Context, delta: (Int) -> Int) {
         val prefs = TimerPreferences.get(context)
@@ -163,9 +169,19 @@ object TimerController {
 
     // ---- 앱 화면 설정 변경 ----
 
-    fun setStepMinutes(context: Context, step: Int) {
+    /** 증감 단위를 초 단위(분+초 환산값)로 설정. */
+    fun setStepSeconds(context: Context, stepSeconds: Int) {
         val prefs = TimerPreferences.get(context)
-        prefs.save(prefs.load().copy(stepMinutes = step.coerceAtLeast(1)))
+        val s = stepSeconds.coerceIn(MIN_STEP_SECONDS, MAX_SECONDS)
+        val data = prefs.load()
+        // 배수 변경 시, 정지 상태면 타이머 시작시간을 해당 배수의 최소값(=1스텝)으로 맞춘다.
+        // 예) 5분 배수로 바꾸면 위젯이 5:00으로 설정된다. (진행/일시정지 중엔 건드리지 않음)
+        val nextSeconds = if (data.state == TimerState.IDLE) {
+            s.coerceIn(MIN_SECONDS, MAX_SECONDS)
+        } else {
+            data.lastSetSeconds
+        }
+        prefs.save(data.copy(stepSeconds = s, lastSetSeconds = nextSeconds))
         WidgetUpdater.updateAllWidgets(context)
     }
 
