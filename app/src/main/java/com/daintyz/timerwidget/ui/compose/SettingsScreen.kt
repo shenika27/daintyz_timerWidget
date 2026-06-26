@@ -124,7 +124,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
 
         // ── 타이머 ──
         SectionHeader("타이머")
-        SettingRow("증감 단위") {
+        SettingRow("한 번에 조절") {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 CompactField(stepMin, { stepMin = it }, width = 48.dp, keyboardType = KeyboardType.Number, textAlign = TextAlign.Center)
                 Text("분", color = AppColors.Brown, fontSize = 13.sp)
@@ -135,14 +135,14 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                     val s = stepSec.text.toIntOrNull() ?: 0
                     val total = m * 60 + s
                     if (total < 5) {
-                        toast(context, "증감 단위는 5초 이상으로 설정하세요")
+                        toast(context, "5초보다 짧게는 조절할 수 없어요")
                     } else {
                         TimerController.setStepSeconds(context, total)
                         // 클램프된 실제 저장값으로 입력칸을 다시 동기화.
                         val saved = TimerPreferences.get(context).load().stepSeconds
                         stepMin = TextFieldValue((saved / 60).toString())
                         stepSec = TextFieldValue((saved % 60).toString())
-                        toast(context, "증감 단위 ${saved / 60}분 ${saved % 60}초로 저장됨")
+                        toast(context, "한 번에 ${saved / 60}분 ${saved % 60}초씩 조절돼요")
                     }
                 }
             }
@@ -197,8 +197,8 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
         // ── 기타 ──
         SectionHeader("기타")
         SettingRow(
-            title = "위젯 강제 새로고침",
-            subtitle = "위젯이 멈췄거나 옛 스킨을 보일 때",
+            title = "위젯 새로고침",
+            subtitle = "위젯이 멈췄거나 예전 모습으로 보일 때",
             onClick = {
                 TimerNotifications.ensureChannels(context)
                 WidgetUpdater.updateAllWidgets(context)
@@ -223,8 +223,8 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                             }
                             is GiftCodeRedeemer.Result.AlreadyOwned ->
                                 toast(context, "이미 보유한 테마예요 (${result.name})")
-                            GiftCodeRedeemer.Result.Invalid -> toast(context, "유효하지 않은 코드예요")
-                            GiftCodeRedeemer.Result.Error -> toast(context, "네트워크 오류 — 잠시 후 다시 시도하세요")
+                            GiftCodeRedeemer.Result.Invalid -> toast(context, "앗, 코드를 다시 확인해 주세요")
+                            GiftCodeRedeemer.Result.Error -> toast(context, "연결이 불안정해요. 잠시 후 다시 시도해 주세요")
                         }
                     }
                 }
@@ -241,7 +241,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             onDismissRequest = { unlockedSkin = null },
             icon = { Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AppColors.Primary) },
             title = { Text("$name 해금 완료!", color = AppColors.TextPrimary) },
-            text = { Text("보유 목록에서 확인하시겠습니까?", color = AppColors.Brown) },
+            text = { Text("보유 목록에서 확인해볼까요?", color = AppColors.Brown) },
             shape = RoundedCornerShape(20.dp),
             containerColor = AppColors.Background,
             confirmButton = {

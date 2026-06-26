@@ -3,7 +3,7 @@
     <string name="app_name">캐릭터 타이머</string>
 
     <!-- 위젯 -->
-    <string name="widget_description">런닝머신 위에서 뛰는 캐릭터 타이머 위젯</string>
+    <string name="widget_description">캐릭터가 함께 달려주는 타이머 위젯</string>
     <string name="default_timer_value">10:00</string>
     <string name="timer_complete_label">완료</string>
 
@@ -18,7 +18,7 @@
     <string name="cd_minus">시간 감소</string>
     <string name="cd_plus">시간 증가</string>
     <string name="cd_start">시작/일시정지</string>
-    <string name="cd_stop">중단</string>
+    <string name="cd_stop">정지</string>
     <string name="cd_character">캐릭터</string>
 
     <!-- 알림 -->
@@ -53,19 +53,21 @@
     <string name="skin_badge_owned">보유 중</string>
     <string name="skin_btn_select">선택</string>
     <string name="skin_btn_buy">구매</string>
-    <string name="skin_btn_download">다운로드</string>
-    <string name="skin_btn_downloading">다운로드 중…</string>
+    <string name="skin_btn_download">받기</string>
+    <string name="skin_btn_downloading">받는 중…</string>
     <string name="skin_btn_retry">다시 시도</string>
-    <string name="skin_download_complete">다운로드 완료</string>
-    <string name="skin_download_fail">다운로드 실패. 다시 시도해주세요.</string>
-    <string name="skin_apply_empty">사용 가능한 스킨이 없습니다. 상점에서 받아보세요.</string>
+    <string name="skin_download_complete">받기 완료</string>
+    <string name="skin_download_fail">앗, 받아오지 못했어요. 다시 시도해 주세요</string>
+    <string name="skin_apply_empty">아직 받은 테마가 없어요. 상점에서 만나보세요</string>
 
     <!-- 상점/상세 화면 -->
     <string name="store_title">상점</string>
     <string name="store_show_all">구매한 항목 포함 보기</string>
     <string name="store_wishlist_only">찜한 항목만 보기</string>
     <string name="store_set_label">캐릭터 + 타이머 세트</string>
-    <string name="store_buy_stub">구매 기능은 준비 중입니다</string>
+    <string name="store_buy_stub">결제 기능은 곧 찾아올게요!</string>
+    <!-- 한정판매 종료 -->
+    <string name="sale_expired">판매 종료</string>
     <!-- 프리스티지(희귀) 스킨 배지 — 디자인 추후, 텍스트 틀만 -->
     <string name="skin_tag_prestige">✦ 프리스티지</string>
     <!-- 신규(출시일+7일 이내) 스킨 배지 -->
@@ -76,7 +78,7 @@
     <!-- 상세/미리보기 캐러셀 (상태 스와이프) -->
     <string name="detail_state_idle">정지</string>
     <string name="detail_state_run">진행 중</string>
-    <string name="detail_state_paused">중단</string>
+    <string name="detail_state_paused">잠깐 멈춤</string>
     <string name="detail_state_complete">완료</string>
     <string name="detail_apply">적용하기</string>
     <string name="detail_applied">적용 중</string>
