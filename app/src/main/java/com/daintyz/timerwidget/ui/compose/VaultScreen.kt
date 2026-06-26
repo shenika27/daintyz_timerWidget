@@ -7,7 +7,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,12 +22,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -315,8 +315,28 @@ private fun FilterRow(
     onFav: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        FilterToggle(Icons.Filled.Paid, stringResource(R.string.vault_owned_only), ownedOnly, onOwned)
+    Row(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // '보유한 항목만 보기' 체크박스.
+        Row(
+            modifier = Modifier.clickable { onOwned() },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(
+                checked = ownedOnly,
+                onCheckedChange = { onOwned() },
+                modifier = Modifier.scale(0.75f),
+            )
+            Text(
+                text = stringResource(R.string.vault_owned_only),
+                color = AppColors.Brown,
+                fontSize = 13.sp,
+            )
+        }
+        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+        // 즐겨찾기만 보기 토글(별 아이콘).
         FilterToggle(Icons.Filled.StarBorder, stringResource(R.string.vault_favorites), favOnly, onFav)
     }
 }

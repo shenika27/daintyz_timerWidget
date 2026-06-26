@@ -61,7 +61,7 @@
 
     <!-- 상점/상세 화면 -->
     <string name="store_title">상점</string>
-    <string name="store_show_all">전체보기 (구매한 항목도)</string>
+    <string name="store_show_all">구매한 항목 포함 보기</string>
     <string name="store_set_label">캐릭터 + 타이머 세트</string>
     <string name="store_buy_stub">구매 기능은 준비 중입니다</string>
     <!-- 프리스티지(희귀) 스킨 배지 — 디자인 추후, 텍스트 틀만 -->
@@ -105,7 +105,7 @@
     <string name="vault_filter_owned">보유</string>
     <string name="vault_filter_locked">미보유</string>
     <string name="vault_favorites">즐겨찾기</string>
-    <string name="vault_owned_only">구매한 항목만</string>
+    <string name="vault_owned_only">보유한 항목만 보기</string>
     <string name="vault_buy">구매하기</string>
     <string name="vault_fav_empty">아직 즐겨찾기한 테마가 없어요.</string>
     <string name="vault_locked_empty">조건에 맞는 테마가 없어요.</string>
