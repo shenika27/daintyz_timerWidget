@@ -76,6 +76,7 @@ object SkinDownloader {
                         name = obj.getString("name"),
                         price = price,
                         isFree = price <= 0,
+                        productId = obj.optString("productId").ifBlank { null },
                         prestige = obj.optBoolean("prestige", false),
                         zipUrl = obj.optString("zipUrl").ifBlank { "$baseUrl/character/zip/$skinId.zip" },
                         thumbnailUrl = obj.optString("thumbnailUrl")

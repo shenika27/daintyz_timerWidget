@@ -14,6 +14,12 @@ data class RemoteSkinEntry(
     val price: Int,
     /** price <= 0 이면 무료. (구매/잠금 판정용 — 기존 호출부 호환을 위해 유지) */
     val isFree: Boolean,
+    /**
+     * Google Play 인앱상품 ID(SKU). 유료 테마만 가지며, 결제 시 launchBillingFlow(productId) 호출에 쓴다.
+     * non-prestige 유료 = 개별 SKU(낱개구매) 또는 평생이용권으로 해금 / prestige = 개별 SKU 전용.
+     * 무료·기프트전용 테마는 null. skinId와 1:1이라도 catalog에서 명시적으로 받는다(가격변경·재출시 시 SKU 분리 대비).
+     */
+    val productId: String? = null,
     /** 프리스티지(희귀) 스킨 여부. 평생이용권으로도 해금 안 됨(항상 개별구매). 상점에서 별도 표시. */
     val prestige: Boolean = false,
     val zipUrl: String,

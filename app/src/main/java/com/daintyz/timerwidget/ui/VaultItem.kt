@@ -22,6 +22,9 @@ sealed interface VaultItem {
     val price: Int
     val prestige: Boolean
 
+    /** Play 인앱상품 ID(SKU). 결제 대상 원격 테마만 가짐. 로컬(보유/내장) 스킨은 null. */
+    val productId: String?
+
     /** 상점 히어로 카드 부제. 없으면 부제 줄 생략. */
     val description: String?
 
@@ -46,6 +49,7 @@ sealed interface VaultItem {
         override val isFree get() = skin.isFree
         override val price get() = 0
         override val prestige get() = skin.prestige
+        override val productId: String? get() = null
         override val description get() = skin.description
         override val createdAt get() = skin.createdAt
         override val saleStart get() = null
@@ -59,6 +63,7 @@ sealed interface VaultItem {
         override val isFree get() = entry.isFree
         override val price get() = entry.price
         override val prestige get() = entry.prestige
+        override val productId: String? get() = entry.productId
         override val description get() = entry.description
         override val createdAt get() = entry.createdAt
         override val saleStart get() = entry.saleStart

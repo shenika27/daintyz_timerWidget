@@ -106,6 +106,7 @@ fun VaultScreen(
     var orderingFavoriteIds by remember { mutableStateOf(favoriteIds) }
     var purchased by remember { mutableStateOf(initialData.purchasedSkinIds) }
     var hasPass by remember { mutableStateOf(initialData.hasLifetimePass) }
+    var giftUnlocked by remember { mutableStateOf(initialData.giftUnlockedSkinIds) }
     var appliedId by remember {
         mutableStateOf(
             if (initialData.selectedCharacterSkinId == initialData.selectedTimerSkinId)
@@ -125,6 +126,7 @@ fun VaultScreen(
         val data = prefs.load()
         purchased = data.purchasedSkinIds
         hasPass = data.hasLifetimePass
+        giftUnlocked = data.giftUnlockedSkinIds
         localSkins = SkinRepository.loadAllSkins(context)
         appliedId = if (data.selectedCharacterSkinId == data.selectedTimerSkinId)
             data.selectedCharacterSkinId else null
@@ -147,10 +149,10 @@ fun VaultScreen(
         if (entries != null) catalog = entries
     }
 
-    val items = remember(localSkins, catalog, ownedOnly, favOnly, favoriteIds, orderingFavoriteIds, purchased, hasPass) {
+    val items = remember(localSkins, catalog, ownedOnly, favOnly, favoriteIds, orderingFavoriteIds, purchased, hasPass, giftUnlocked) {
         buildDisplayList(
             localSkins, catalog, favoriteIds, orderingFavoriteIds,
-            purchased, hasPass, ownedOnly, favOnly,
+            purchased, hasPass, giftUnlocked, ownedOnly, favOnly,
         )
     }
 
@@ -313,13 +315,14 @@ private fun buildDisplayList(
     orderingFavoriteIds: Set<String>,
     purchased: Set<String>,
     hasPass: Boolean,
+    giftUnlocked: Set<String>,
     ownedOnly: Boolean,
     favOnly: Boolean,
 ): List<VaultItem> {
     val localIds = localSkins.map { it.skinId }.toSet()
     val all = buildList {
         for (skin in localSkins) {
-            val owned = SkinAvailabilityChecker.isSkinAvailable(skin, purchased, hasPass)
+            val owned = SkinAvailabilityChecker.isSkinAvailable(skin, purchased, hasPass, giftUnlocked)
             add(VaultItem.Local(skin, owned))
         }
         for (entry in catalog) {

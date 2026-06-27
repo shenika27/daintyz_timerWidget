@@ -7,21 +7,25 @@ import com.daintyz.timerwidget.model.Skin
  *
  * 해금 규칙(BM):
  *   1) 무료(isFree)                                  → 항상 사용 가능
- *   2) 개별구매(purchasedSkinIds 포함)               → 사용 가능
- *   3) 업데이트 평생이용권(hasLifetimePass)          → 프리스티지가 '아닌' 유료 테마 일괄 해금
- *      └ 프리스티지(prestige) 스킨은 이용권으로 안 풀림 → 반드시 개별구매(위 2번)로만 해금
+ *   2) 개별구매(purchasedSkinIds 포함, Play 결제)     → 사용 가능
+ *   3) 기프트코드 해금(giftUnlockedSkinIds 포함)      → 사용 가능 (프리스티지 포함 — 코드는 무엇이든 해금)
+ *   4) 업데이트 평생이용권(hasLifetimePass)          → 프리스티지가 '아닌' 유료 테마 일괄 해금
+ *      └ 프리스티지(prestige) 스킨은 이용권으로 안 풀림 → 개별구매(2) 또는 기프트(3)로만 해금
  *
- * 결제 미연동 단계에서는 purchasedSkinIds=∅, hasLifetimePass=false로 들어와 사실상 '무료만' 동작한다.
+ * 결제 미연동 단계에서는 purchasedSkinIds=∅, hasLifetimePass=false로 들어와 사실상 '무료 + 기프트만' 동작한다.
+ * [giftUnlockedSkinIds]는 Play 결제와 출처가 달라(환불 회수 대상 아님) 별도 인자로 받는다.
  */
 object SkinAvailabilityChecker {
 
     fun isSkinAvailable(
         skin: Skin,
         purchasedSkinIds: Set<String> = emptySet(),
-        hasLifetimePass: Boolean = false
+        hasLifetimePass: Boolean = false,
+        giftUnlockedSkinIds: Set<String> = emptySet()
     ): Boolean {
         if (skin.isFree) return true
         if (skin.skinId in purchasedSkinIds) return true
+        if (skin.skinId in giftUnlockedSkinIds) return true
         // 평생이용권은 프리스티지를 제외한 유료 테마만 해금.
         if (hasLifetimePass && !skin.prestige) return true
         return false
@@ -31,6 +35,7 @@ object SkinAvailabilityChecker {
     fun isLocked(
         skin: Skin,
         purchasedSkinIds: Set<String> = emptySet(),
-        hasLifetimePass: Boolean = false
-    ): Boolean = !isSkinAvailable(skin, purchasedSkinIds, hasLifetimePass)
+        hasLifetimePass: Boolean = false,
+        giftUnlockedSkinIds: Set<String> = emptySet()
+    ): Boolean = !isSkinAvailable(skin, purchasedSkinIds, hasLifetimePass, giftUnlockedSkinIds)
 }

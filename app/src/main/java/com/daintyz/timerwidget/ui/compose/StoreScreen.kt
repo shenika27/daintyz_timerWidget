@@ -71,6 +71,7 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
     var catalog by remember { mutableStateOf(emptyList<RemoteSkinEntry>()) }
     var purchased by remember { mutableStateOf(emptySet<String>()) }
     var hasPass by remember { mutableStateOf(false) }
+    var giftUnlocked by remember { mutableStateOf(emptySet<String>()) }
     var favoriteIds by remember { mutableStateOf(TimerPreferences.get(context).loadFavoriteSkinIds()) }
     var showAll by rememberSaveable { mutableStateOf(false) }
     var wishlistOnly by rememberSaveable { mutableStateOf(false) }
@@ -79,6 +80,7 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
         val data = TimerPreferences.get(context).load()
         purchased = data.purchasedSkinIds
         hasPass = data.hasLifetimePass
+        giftUnlocked = data.giftUnlockedSkinIds
         favoriteIds = TimerPreferences.get(context).loadFavoriteSkinIds()
         localSkins = SkinRepository.loadAllSkins(context)
     }
@@ -97,13 +99,13 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
         if (entries != null) catalog = entries
     }
 
-    val items = remember(localSkins, catalog, purchased, hasPass, favoriteIds, showAll, wishlistOnly) {
+    val items = remember(localSkins, catalog, purchased, hasPass, giftUnlocked, favoriteIds, showAll, wishlistOnly) {
         val localIds = localSkins.map { it.skinId }.toSet()
         buildList {
             for (skin in localSkins) {
                 // 앱 내장 기본 에셋(예: cha01)은 상점에 노출하지 않는다 — 상점은 디자인 레포 항목만.
                 if (skin.bundled) continue
-                val owned = SkinAvailabilityChecker.isSkinAvailable(skin, purchased, hasPass)
+                val owned = SkinAvailabilityChecker.isSkinAvailable(skin, purchased, hasPass, giftUnlocked)
                 if (owned && !showAll) continue
                 add(VaultItem.Local(skin, owned))
             }

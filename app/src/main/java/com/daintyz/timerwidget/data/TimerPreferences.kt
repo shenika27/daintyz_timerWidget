@@ -41,7 +41,8 @@ class TimerPreferences private constructor(context: Context) {
         selectedTimerSkinId = prefs.getString(KEY_SELECTED_TIMER_SKIN_ID, null)
             ?: prefs.getString(KEY_SELECTED_SKIN_ID, null) ?: DEFAULT_SKIN_ID,
         purchasedSkinIds = prefs.getStringSet(KEY_PURCHASED_SKIN_IDS, emptySet())?.toSet() ?: emptySet(),
-        hasLifetimePass = prefs.getBoolean(KEY_LIFETIME_PASS, false)
+        hasLifetimePass = prefs.getBoolean(KEY_LIFETIME_PASS, false),
+        giftUnlockedSkinIds = prefs.getStringSet(KEY_GIFT_UNLOCKED_SKIN_IDS, emptySet())?.toSet() ?: emptySet()
     )
 
     // ---- 쓰기 ----
@@ -60,6 +61,7 @@ class TimerPreferences private constructor(context: Context) {
             putString(KEY_SELECTED_TIMER_SKIN_ID, data.selectedTimerSkinId)
             putStringSet(KEY_PURCHASED_SKIN_IDS, data.purchasedSkinIds)
             putBoolean(KEY_LIFETIME_PASS, data.hasLifetimePass)
+            putStringSet(KEY_GIFT_UNLOCKED_SKIN_IDS, data.giftUnlockedSkinIds)
         }.apply()
     }
 
@@ -89,9 +91,14 @@ class TimerPreferences private constructor(context: Context) {
     fun isUseSystemFont(): Boolean = prefs.getBoolean(KEY_USE_SYSTEM_FONT, false)
     fun setUseSystemFont(on: Boolean) = prefs.edit().putBoolean(KEY_USE_SYSTEM_FONT, on).apply()
 
-    /** 기프트코드 해금 등으로 보유 스킨을 추가한다(중복은 Set이 흡수). */
+    /** Google Play 결제 성공 시 구매 스킨을 추가한다(중복은 Set이 흡수). 결제 연동(Phase 4)에서 사용. */
     fun addPurchasedSkinId(skinId: String) {
         update { it.copy(purchasedSkinIds = it.purchasedSkinIds + skinId) }
+    }
+
+    /** 기프트코드 해금으로 보유 스킨을 추가한다(중복은 Set이 흡수). Play 구매와 출처를 분리해 동기화 회수 대상에서 제외한다. */
+    fun addGiftUnlockedSkinId(skinId: String) {
+        update { it.copy(giftUnlockedSkinIds = it.giftUnlockedSkinIds + skinId) }
     }
 
     /** [load] → 변형 → [save]를 한 번에. 변형 결과를 그대로 반환한다. */
@@ -129,6 +136,7 @@ class TimerPreferences private constructor(context: Context) {
         private const val KEY_SELECTED_TIMER_SKIN_ID = "selected_timer_skin_id"
         private const val KEY_PURCHASED_SKIN_IDS = "purchased_skin_ids"
         private const val KEY_LIFETIME_PASS = "has_lifetime_pass"
+        private const val KEY_GIFT_UNLOCKED_SKIN_IDS = "gift_unlocked_skin_ids"
         private const val KEY_FAVORITE_SKIN_IDS = "favorite_skin_ids"
         private const val KEY_COMPLETE_SOUND = "complete_sound_enabled"
         private const val KEY_VIBRATE = "vibrate_enabled"
