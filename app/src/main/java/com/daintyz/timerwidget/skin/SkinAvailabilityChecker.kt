@@ -22,13 +22,27 @@ object SkinAvailabilityChecker {
         purchasedSkinIds: Set<String> = emptySet(),
         hasLifetimePass: Boolean = false,
         giftUnlockedSkinIds: Set<String> = emptySet()
+    ): Boolean = isSkinAvailable(
+        skin.skinId, skin.isFree, skin.prestige, purchasedSkinIds, hasLifetimePass, giftUnlockedSkinIds
+    )
+
+    /**
+     * Skin 객체가 없을 때(원격 catalog 항목 등) 필드만으로 동일 규칙을 판정한다.
+     * 상점/창고 목록에서 미다운로드 원격 테마의 '보유(권리)' 여부 계산에 쓴다.
+     */
+    fun isSkinAvailable(
+        skinId: String,
+        isFree: Boolean,
+        prestige: Boolean,
+        purchasedSkinIds: Set<String> = emptySet(),
+        hasLifetimePass: Boolean = false,
+        giftUnlockedSkinIds: Set<String> = emptySet()
     ): Boolean {
-        if (skin.isFree) return true
-        if (skin.skinId in purchasedSkinIds) return true
-        if (skin.skinId in giftUnlockedSkinIds) return true
+        if (isFree) return true
+        if (skinId in purchasedSkinIds) return true
+        if (skinId in giftUnlockedSkinIds) return true
         // 평생이용권은 프리스티지를 제외한 유료 테마만 해금.
-        if (hasLifetimePass && !skin.prestige) return true
-        return false
+        return hasLifetimePass && !prestige
     }
 
     /** 잠금 표시 여부 = 사용 불가일 때. (스킨 선택 UI에서 자물쇠/구매버튼 노출 판단) */

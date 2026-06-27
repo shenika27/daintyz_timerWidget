@@ -12,7 +12,8 @@ private const val NEW_BADGE_DAYS = 7L
  * 통합 캐러셀의 카드 1장. 로컬(내장/다운로드 완료) 스킨이거나, 카탈로그에만 있는(미다운로드) 원격 테마다.
  *
  * - [Local]: 보유 여부([owned])가 갈린다. 보유면 적용 가능, 미보유(유료 미구매)면 잠김.
- * - [Remote]: 항상 미보유. 무료면 다운로드, 유료면 구매 대상.
+ * - [Remote]: 미다운로드 catalog 테마. [owned]=권리 보유(이용권/구매/기프트/무료)지만 아직 파일 없음 → 다운로드 대상.
+ *   권리 없으면 구매 대상. (owned는 빌더가 권한 판정으로 채워 넣는다)
  */
 sealed interface VaultItem {
     val id: String
@@ -56,10 +57,9 @@ sealed interface VaultItem {
         override val saleEnd get() = null
     }
 
-    data class Remote(val entry: RemoteSkinEntry) : VaultItem {
+    data class Remote(val entry: RemoteSkinEntry, override val owned: Boolean = false) : VaultItem {
         override val id get() = entry.skinId
         override val name get() = entry.name
-        override val owned get() = false
         override val isFree get() = entry.isFree
         override val price get() = entry.price
         override val prestige get() = entry.prestige

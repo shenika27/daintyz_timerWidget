@@ -327,7 +327,11 @@ private fun buildDisplayList(
         for (entry in catalog) {
             if (entry.hidden) continue
             if (entry.skinId in localIds) continue
-            val remote = VaultItem.Remote(entry)
+            // 이용권/구매/기프트로 권리가 있으면(미다운로드) 보유로 표시 → 잠금/가격 대신 다운로드.
+            val owned = SkinAvailabilityChecker.isSkinAvailable(
+                entry.skinId, entry.isFree, entry.prestige, purchased, hasPass, giftUnlocked
+            )
+            val remote = VaultItem.Remote(entry, owned)
             // 창고 캐러셀은 보유/구매가능(ACTIVE)만 노출. 미출시(UPCOMING)·기간만료(EXPIRED)는 제외.
             if (remote.saleStatus != SaleStatus.ACTIVE) continue
             add(remote)
@@ -451,7 +455,7 @@ private fun VaultCard(
             }
         }
 
-        // 우상단: 적용됨 배지 / 가격 칩.
+        // 우상단: 적용됨 배지 / (미보유만) 가격 칩. 보유·미적용은 칩 없이 하단 버튼(다운로드/적용)으로 안내.
         if (applied) {
             Text(
                 text = stringResource(R.string.vault_applied),
@@ -465,7 +469,7 @@ private fun VaultCard(
                     .background(AppColors.Primary)
                     .padding(horizontal = 12.dp, vertical = 4.dp),
             )
-        } else {
+        } else if (!item.owned) {
             Text(
                 text = priceLabel(item, prestigeMark = true),
                 color = AppColors.TextPrimary,
@@ -610,12 +614,17 @@ private fun ActionButtons(
         onClick = {
             when {
                 downloading -> {}
-                item.owned -> if (!applied) onApply()
+                // 로컬(다운로드됨) 보유 → 적용.
+                item is VaultItem.Local && item.owned -> if (!applied) onApply()
+                // 원격 보유(권리O, 미다운로드): 무료=인라인 다운로드, 유료=상세에서 보호 다운로드.
+                item is VaultItem.Remote && item.owned && item.isFree -> onDownload(item.entry)
+                item is VaultItem.Remote && item.owned -> onBuy()
+                // 원격 미보유: 무료=다운로드, 유료=구매(상세).
                 item is VaultItem.Remote && item.isFree -> onDownload(item.entry)
                 else -> onBuy()
             }
         },
-        enabled = !(downloading || (item.owned && applied)),
+        enabled = !(downloading || applied),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = AppColors.Primary,
@@ -625,7 +634,10 @@ private fun ActionButtons(
     ) {
         val label = when {
             downloading -> stringResource(R.string.skin_btn_downloading)
-            item.owned -> stringResource(if (applied) R.string.vault_in_use else R.string.vault_apply)
+            item is VaultItem.Local && item.owned ->
+                stringResource(if (applied) R.string.vault_in_use else R.string.vault_apply)
+            // 원격 보유(권리O, 미다운로드) → 다운로드.
+            item.owned -> stringResource(if (downloadFailed) R.string.skin_btn_retry else R.string.skin_btn_download)
             item is VaultItem.Remote && item.isFree && downloadFailed -> stringResource(R.string.skin_btn_retry)
             item is VaultItem.Remote && item.isFree -> stringResource(R.string.skin_btn_download)
             else -> stringResource(R.string.vault_buy)

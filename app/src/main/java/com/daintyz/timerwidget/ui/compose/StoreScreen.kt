@@ -114,7 +114,12 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
                 // 로컬 스킨으로 위에서 처리되므로 여기서 빠져도 창고/표시에 영향 없음.
                 if (entry.hidden) continue
                 if (entry.skinId in localIds) continue
-                val remote = VaultItem.Remote(entry)
+                // 이용권/구매/기프트로 이미 권리가 있는(미다운로드) 원격 테마는 보유로 간주 → 기본은 숨김(전체보기 시 노출).
+                val owned = SkinAvailabilityChecker.isSkinAvailable(
+                    entry.skinId, entry.isFree, entry.prestige, purchased, hasPass, giftUnlocked
+                )
+                if (owned && !showAll) continue
+                val remote = VaultItem.Remote(entry, owned)
                 // 한정구매: 시작 전(UPCOMING)은 미출시라 숨김. 종료 후(EXPIRED)는 카드는 두되 잠금 표시.
                 if (remote.saleStatus == SaleStatus.UPCOMING) continue
                 add(remote)
