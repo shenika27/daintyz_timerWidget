@@ -142,6 +142,9 @@ fun DetailScreen(
     var wishlisted by remember { mutableStateOf(skinId in TimerPreferences.get(context).loadFavoriteSkinIds()) }
     // 유료 상품의 현지화 가격(formattedPrice). SKU 미등록이면 null → catalog 가격으로 폴백.
     var priceText by remember { mutableStateOf<String?>(null) }
+    // 평생이용권 보유 여부 + 가격(하단 '평생이용권 구매' 버튼 노출/표시용).
+    var hasPass by remember { mutableStateOf(TimerPreferences.get(context).load().hasLifetimePass) }
+    var passPriceText by remember { mutableStateOf<String?>(null) }
     val downloading = downloadProgress != null
 
     // 화면 복귀(구매 다이얼로그 종료 등)마다 권한/다운로드 상태를 다시 읽어 버튼을 갱신한다.
@@ -152,7 +155,9 @@ fun DetailScreen(
                 entitled = computeEntitled()
                 downloaded = SkinDownloader.isDownloaded(context, skinId)
                 skin = SkinRepository.findSkin(context, skinId)
-                applied = TimerPreferences.get(context).load().selectedCharacterSkinId == skinId
+                val d = TimerPreferences.get(context).load()
+                applied = d.selectedCharacterSkinId == skinId
+                hasPass = d.hasLifetimePass
             }
         }
         lifecycleOwner.lifecycle.addObserver(obs)
@@ -166,6 +171,15 @@ fun DetailScreen(
             priceText = withContext(Dispatchers.IO) {
                 BillingManager.productDetails(context, listOf(pid))
             }.firstOrNull()?.oneTimePurchaseOfferDetails?.formattedPrice
+        }
+    }
+
+    // 평생이용권 가격 조회(프리스티지·무료 상세에선 버튼 자체가 없어 생략).
+    LaunchedEffect(isFree, prestige) {
+        if (!isFree && !prestige) {
+            passPriceText = withContext(Dispatchers.IO) {
+                BillingManager.lifetimePassDetails(context)
+            }?.oneTimePurchaseOfferDetails?.formattedPrice
         }
     }
 
@@ -397,6 +411,23 @@ fun DetailScreen(
             }
         }
 
+        // 평생이용권 구매(프리스티지 제외 유료 테마 일괄 해금). 결과는 ON_RESUME에서 반영.
+        fun startPassPurchase() {
+            val act = activity
+            if (act == null) {
+                Toast.makeText(context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
+                return
+            }
+            scope.launch {
+                val details = withContext(Dispatchers.IO) { BillingManager.lifetimePassDetails(context) }
+                if (details == null) {
+                    Toast.makeText(context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
+                } else {
+                    BillingManager.launchPurchase(act, details)
+                }
+            }
+        }
+
         Button(
             onClick = {
                 when {
@@ -433,6 +464,29 @@ fun DetailScreen(
             }
             DownloadButtonContent(label = label, progress = downloadProgress)
         }
+
+        // '구매하기' 하단의 평생이용권 구매 버튼.
+        // 프리스티지는 이용권으로 해금 안 되므로 노출 제외. 무료/이미 보유/이미 이용권 보유 시에도 숨김.
+        if (!prestige && !isFree && !entitled && !hasPass) {
+            val passLabel = stringResource(R.string.lifetime_pass_buy) +
+                (passPriceText?.let { " ($it)" } ?: "")
+            Button(
+                onClick = { startPassPurchase() },
+                enabled = !downloading,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.Surface,
+                    contentColor = AppColors.Primary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 8.dp)
+                    .height(48.dp),
+            ) {
+                Text(passLabel, fontSize = 15.sp)
+            }
+        }
+
         Spacer(Modifier.height(48.dp))
     }
 }
@@ -657,7 +711,7 @@ private fun startDownload(
 }
 
 /** Compose의 ContextWrapper 체인에서 호스트 Activity를 찾는다(launchBillingFlow에 필요). 없으면 null. */
-private fun Context.findActivity(): Activity? {
+internal fun Context.findActivity(): Activity? {
     var ctx: Context? = this
     while (ctx is android.content.ContextWrapper) {
         if (ctx is Activity) return ctx

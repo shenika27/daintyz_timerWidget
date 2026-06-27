@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,6 +95,9 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
     var giftCode by remember { mutableStateOf(TextFieldValue("")) }
     var redeeming by remember { mutableStateOf(false) }
     var restoring by remember { mutableStateOf(false) }
+    var hasPass by remember { mutableStateOf(prefs.load().hasLifetimePass) }
+    var passPriceText by remember { mutableStateOf<String?>(null) }
+    var buyingPass by remember { mutableStateOf(false) }
 
     val versionName = remember {
         runCatching {
@@ -108,6 +112,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             stepSec = TextFieldValue((data.stepSeconds % 60).toString())
         }
         layoutMode = data.layoutMode
+        hasPass = data.hasLifetimePass
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -115,6 +120,13 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
         val obs = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) sync() }
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+
+    // 평생이용권 가격(formattedPrice) 조회. SKU 미등록이면 null → '구매' 라벨만.
+    LaunchedEffect(Unit) {
+        passPriceText = withContext(Dispatchers.IO) {
+            BillingManager.lifetimePassDetails(context)
+        }?.oneTimePurchaseOfferDetails?.formattedPrice
     }
 
     Column(
@@ -211,6 +223,34 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             },
         ) {
             Icon(Icons.Filled.Refresh, contentDescription = null, tint = AppColors.Brown)
+        }
+        SettingRow(
+            title = "평생이용권",
+            subtitle = if (hasPass) "보유 중"
+                else passPriceText?.let { "$it · 프리스티지 제외 일괄 해금" }
+                    ?: "프리스티지 제외 유료 테마 일괄 해금",
+        ) {
+            if (hasPass) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AppColors.Primary)
+            } else {
+                SmallButton(if (buyingPass) "확인 중…" else "구매", enabled = !buyingPass) {
+                    val act = context.findActivity()
+                    if (act == null) {
+                        toast(context, "결제를 준비 중이에요")
+                    } else {
+                        scope.launch {
+                            buyingPass = true
+                            val details = withContext(Dispatchers.IO) {
+                                BillingManager.lifetimePassDetails(context)
+                            }
+                            buyingPass = false
+                            // 결과는 비동기 도착 → ON_RESUME의 sync()에서 hasPass 갱신.
+                            if (details == null) toast(context, "결제를 준비 중이에요")
+                            else BillingManager.launchPurchase(act, details)
+                        }
+                    }
+                }
+            }
         }
         SettingRow(
             title = "구매 복원",

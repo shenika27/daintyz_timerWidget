@@ -198,6 +198,10 @@ object BillingManager {
         return result.productDetailsList.orEmpty()
     }
 
+    /** 평생이용권 상품정보(가격 표시 + 구매 띄우기에 공용). SKU 미등록이면 null. */
+    suspend fun lifetimePassDetails(context: Context): ProductDetails? =
+        productDetails(context, listOf(LIFETIME_PASS_PRODUCT_ID)).firstOrNull()
+
     /**
      * 구매 흐름을 띄운다. 결과는 [PurchasesUpdatedListener]로 비동기 도착 → 권한 기록 + acknowledge 후
      * [onEntitlementsChanged] 통지. 구매 완료 후 보호 zip 다운로드는 호출부(Phase 4)가 이어 붙인다.
