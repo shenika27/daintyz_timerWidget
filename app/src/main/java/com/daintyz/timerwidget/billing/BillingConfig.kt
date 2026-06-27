@@ -13,7 +13,7 @@ object BillingConfig {
      * 예: "https://daintyz-billing.<account>.workers.dev"
      * (infra/billing-worker 참고). 빈 문자열/미교체 상태면 보호 다운로드는 시도해도 실패한다.
      */
-    const val WORKER_BASE_URL = ""
+    const val WORKER_BASE_URL = "https://daintyz-billing.xornexon.workers.dev"
 
     /** 보호 다운로드 엔드포인트 경로(Worker src/index.js의 라우트와 일치). */
     const val DOWNLOAD_PATH = "/v1/skins/download"
