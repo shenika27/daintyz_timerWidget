@@ -1,0 +1,21 @@
+# daintyz 결제 검증 Worker 설정.
+# 배포: wrangler deploy  (사전: wrangler login → Cloudflare 로그인)
+name = "daintyz-billing"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+# ── 공개 가능한 변수(비밀 아님) ──
+[vars]
+PACKAGE_NAME = "com.daintyz.timerwidget"
+LIFETIME_PASS_PRODUCT_ID = "lifetime_pass"
+# SkinRepoUrls.CATALOG_URL과 반드시 동일하게 유지.
+CATALOG_URL = "https://raw.githubusercontent.com/shenika27/daintyz_timer_characterList/main/catalog.json"
+
+# ── R2 버킷 바인딩(유료 zip 비공개 저장소) ──
+# 사전: wrangler r2 bucket create daintyz-skins  (버킷 공개 접근은 OFF로 둔다)
+[[r2_buckets]]
+binding = "SKINS_BUCKET"
+bucket_name = "daintyz-skins"
+
+# ── 비밀(여기 두지 않음) ──
+# GOOGLE_SERVICE_ACCOUNT_JSON 은 wrangler secret put 으로 등록한다(README 참고).
