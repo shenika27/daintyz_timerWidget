@@ -31,8 +31,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.daintyz.timerwidget.R
+import com.daintyz.timerwidget.billing.BillingManager
+import com.daintyz.timerwidget.skin.SkinDownloader
 import com.daintyz.timerwidget.skin.SkinRepoUrls
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.daintyz.timerwidget.ui.compose.AdaptiveContent
 import com.daintyz.timerwidget.ui.compose.AppColors
 import com.daintyz.timerwidget.ui.compose.AppTheme
@@ -81,6 +87,26 @@ class MainActivity : AppCompatActivity() {
         }
 
         requestNotificationPermissionIfNeeded()
+        syncEntitlementsFromPlay()
+    }
+
+    /**
+     * 앱 시작 시 Play 구매내역으로 권한(purchasedSkinIds/hasLifetimePass)을 동기화한다.
+     * 권한 단일 출처는 Play이므로 환불·취소분은 회수된다. catalog로 productId→skinId 매핑을 만들어 넘긴다.
+     * 기프트 해금분은 출처가 달라 동기화 대상이 아니다(보존).
+     */
+    private fun syncEntitlementsFromPlay() {
+        BillingManager.start(applicationContext)
+        lifecycleScope.launch {
+            val map = withContext(Dispatchers.IO) {
+                runCatching { SkinDownloader.fetchCatalog(SkinRepoUrls.CATALOG_URL) }
+                    .getOrNull()
+                    ?.mapNotNull { entry -> entry.productId?.let { it to entry.skinId } }
+                    ?.toMap()
+                    .orEmpty()
+            }
+            BillingManager.syncEntitlements(applicationContext, map)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

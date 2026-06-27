@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -58,11 +59,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.daintyz.timerwidget.billing.BillingManager
 import com.daintyz.timerwidget.controller.TimerController
 import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.LayoutMode
 import com.daintyz.timerwidget.notification.TimerNotifications
 import com.daintyz.timerwidget.skin.GiftCodeRedeemer
+import com.daintyz.timerwidget.skin.SkinDownloader
+import com.daintyz.timerwidget.skin.SkinRepoUrls
 import com.daintyz.timerwidget.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -89,6 +93,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
     var useSystemFont by remember { mutableStateOf(prefs.isUseSystemFont()) }
     var giftCode by remember { mutableStateOf(TextFieldValue("")) }
     var redeeming by remember { mutableStateOf(false) }
+    var restoring by remember { mutableStateOf(false) }
 
     val versionName = remember {
         runCatching {
@@ -206,6 +211,34 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             },
         ) {
             Icon(Icons.Filled.Refresh, contentDescription = null, tint = AppColors.Brown)
+        }
+        SettingRow(
+            title = "구매 복원",
+            subtitle = "기기를 바꿨거나 앱을 다시 설치했을 때",
+            onClick = if (restoring) null else {
+                {
+                    scope.launch {
+                        restoring = true
+                        // Play 구매내역을 다시 조회해 권한을 복원한다. productId→skinId는 catalog에서.
+                        val map = withContext(Dispatchers.IO) {
+                            runCatching { SkinDownloader.fetchCatalog(SkinRepoUrls.CATALOG_URL) }
+                                .getOrNull()
+                                ?.mapNotNull { e -> e.productId?.let { it to e.skinId } }
+                                ?.toMap()
+                                .orEmpty()
+                        }
+                        BillingManager.syncEntitlements(context, map)
+                        restoring = false
+                        toast(context, "구매 내역을 확인했어요")
+                    }
+                }
+            },
+        ) {
+            if (restoring) {
+                Text("확인 중…", color = AppColors.Brown, fontSize = 13.sp)
+            } else {
+                Icon(Icons.Filled.Restore, contentDescription = null, tint = AppColors.Brown)
+            }
         }
         SettingRow("기프트코드") {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
