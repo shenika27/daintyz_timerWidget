@@ -130,6 +130,7 @@ class MainActivity : AppCompatActivity() {
             putExtra(DetailActivity.EXTRA_IS_FREE, item.isFree)
             putExtra(DetailActivity.EXTRA_PRICE, item.price)
             putExtra(DetailActivity.EXTRA_PRESTIGE, item.prestige)
+            putExtra(DetailActivity.EXTRA_PRODUCT_ID, item.productId)
             putExtra(DetailActivity.EXTRA_SALE_EXPIRED, item.saleStatus == SaleStatus.EXPIRED)
             putExtra(DetailActivity.EXTRA_OPENED_FROM_STORE, openedFromStore)
             if (item is VaultItem.Remote) {

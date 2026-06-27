@@ -275,9 +275,8 @@ fun VaultScreen(
                     Toast.LENGTH_SHORT
                 ).show()
             },
-            onBuy = {
-                Toast.makeText(context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
-            },
+            // 구매는 상세화면(단일 창구)에서 — 거기서 가격(formattedPrice)·구매·보호 다운로드를 처리한다.
+            onBuy = { onOpenDetail(focused) },
             onDownload = { entry ->
                 downloadProgresses.value = downloadProgresses.value + (entry.skinId to -1)
                 failedDownloadIds.value = failedDownloadIds.value - entry.skinId

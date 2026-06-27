@@ -23,6 +23,7 @@ class DetailActivity : AppCompatActivity() {
         const val EXTRA_IS_FREE = "is_free"
         const val EXTRA_PRICE = "price"
         const val EXTRA_PRESTIGE = "prestige"
+        const val EXTRA_PRODUCT_ID = "product_id"
         const val EXTRA_ZIP_URL = "zip_url"
         const val EXTRA_PREVIEW_BASE = "preview_base"
         const val EXTRA_SALE_EXPIRED = "sale_expired"
@@ -38,6 +39,7 @@ class DetailActivity : AppCompatActivity() {
         val isFree = intent.getBooleanExtra(EXTRA_IS_FREE, true)
         val price = intent.getIntExtra(EXTRA_PRICE, 0)
         val prestige = intent.getBooleanExtra(EXTRA_PRESTIGE, false)
+        val productId = intent.getStringExtra(EXTRA_PRODUCT_ID)
         val zipUrl = intent.getStringExtra(EXTRA_ZIP_URL)
         val previewBase = intent.getStringExtra(EXTRA_PREVIEW_BASE) ?: SkinRepoUrls.ASSET_BASE
         val saleExpired = intent.getBooleanExtra(EXTRA_SALE_EXPIRED, false)
@@ -53,6 +55,7 @@ class DetailActivity : AppCompatActivity() {
                         isFree = isFree,
                         price = price,
                         prestige = prestige,
+                        productId = productId,
                         previewBase = previewBase,
                         zipUrl = zipUrl,
                         saleExpired = saleExpired,

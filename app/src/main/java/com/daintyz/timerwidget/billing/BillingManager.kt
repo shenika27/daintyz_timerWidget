@@ -158,6 +158,25 @@ object BillingManager {
     }
 
     /**
+     * 현재 '구매완료' 상태인 productId→purchaseToken 매핑을 돌려준다. 보호 다운로드 요청 시
+     * 그 스킨의 토큰([SkinDownloader.downloadFromWorker]의 purchaseToken)과 평생이용권 토큰을 꺼내는 데 쓴다.
+     */
+    suspend fun ownedTokens(context: Context): Map<String, String> {
+        val c = ensureReady(context) ?: return emptyMap()
+        val params = QueryPurchasesParams.newBuilder()
+            .setProductType(BillingClient.ProductType.INAPP)
+            .build()
+        val result = c.queryPurchasesAsync(params)
+        if (result.billingResult.responseCode != BillingClient.BillingResponseCode.OK) return emptyMap()
+        val map = mutableMapOf<String, String>()
+        for (purchase in result.purchasesList) {
+            if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
+            for (productId in purchase.products) map[productId] = purchase.purchaseToken
+        }
+        return map
+    }
+
+    /**
      * 주어진 productId들의 상품정보(현지화 가격 등)를 조회한다. 가격 표시는 catalog의 price(원)가 아니라
      * 여기서 얻은 [ProductDetails.getOneTimePurchaseOfferDetails]의 formattedPrice를 써야 정확하다.
      */
