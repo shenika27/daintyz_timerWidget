@@ -69,6 +69,7 @@ import com.daintyz.timerwidget.model.TimerData
 import com.daintyz.timerwidget.model.TimerState
 import com.daintyz.timerwidget.skin.RemoteImageLoader
 import com.daintyz.timerwidget.skin.SkinRepoUrls
+import com.daintyz.timerwidget.skin.SkinAvailabilityChecker
 import com.daintyz.timerwidget.skin.SkinDownloader
 import com.daintyz.timerwidget.skin.SkinRepository
 import com.daintyz.timerwidget.widget.WidgetUpdater
@@ -80,6 +81,28 @@ import kotlin.math.absoluteValue
 
 /** prevNN 미리보기 최대 탐침 수 (디자인레포 규칙상 prev01부터 연속, 첫 결번에서 중단). */
 private const val MAX_PREVIEWS = 30
+
+internal enum class DetailPrimaryAction {
+    APPLY,
+    DOWNLOAD,
+    BUY,
+    NONE
+}
+
+internal fun detailPrimaryAction(
+    localRenderable: Boolean,
+    entitled: Boolean,
+    applied: Boolean,
+    downloading: Boolean,
+    saleExpired: Boolean,
+): DetailPrimaryAction = when {
+    downloading -> DetailPrimaryAction.NONE
+    localRenderable && entitled && !applied -> DetailPrimaryAction.APPLY
+    localRenderable && entitled && applied -> DetailPrimaryAction.NONE
+    entitled -> DetailPrimaryAction.DOWNLOAD
+    saleExpired -> DetailPrimaryAction.NONE
+    else -> DetailPrimaryAction.BUY
+}
 
 @Composable
 private fun stateLabel(state: TimerState): String = stringResource(
@@ -106,7 +129,6 @@ private fun stateLabel(state: TimerState): String = stringResource(
 fun DetailScreen(
     skinId: String,
     name: String,
-    initialOwned: Boolean,
     isFree: Boolean,
     price: Int,
     prestige: Boolean,
@@ -123,22 +145,31 @@ fun DetailScreen(
 
     // 권한(사용 권리) 판정 — SkinAvailabilityChecker와 동일 규칙. 원격(미다운로드) 항목도 이용권/구매/기프트면 true.
     fun computeEntitled(): Boolean {
-        if (isFree) return true
         val d = TimerPreferences.get(context).load()
-        if (skinId in d.purchasedSkinIds) return true
-        if (skinId in d.giftUnlockedSkinIds) return true
-        return d.hasLifetimePass && !prestige
+        return SkinAvailabilityChecker.isSkinAvailable(
+            skinId = skinId,
+            isFree = isFree,
+            prestige = prestige,
+            purchasedSkinIds = d.purchasedSkinIds,
+            hasLifetimePass = d.hasLifetimePass,
+            giftUnlockedSkinIds = d.giftUnlockedSkinIds,
+        )
     }
 
-    // 권한(entitled)과 실제 파일 보유(downloaded)를 분리한다. 방금 구매/이용권/기프트는 entitled지만 아직 미다운로드일 수 있다.
-    var entitled by remember { mutableStateOf(initialOwned || computeEntitled()) }
-    var downloaded by remember { mutableStateOf(SkinDownloader.isDownloaded(context, skinId)) }
+    // 권한(entitled)과 로컬 렌더 가능 여부(localRenderable)를 분리한다.
+    // 다운로드 스킨은 filesDir, 기본 스킨은 assets에 있으므로 SkinRepository 기준으로 판단한다.
+    var entitled by remember { mutableStateOf(computeEntitled()) }
     var downloadProgress by remember { mutableStateOf<Int?>(null) }
     var downloadFailed by remember { mutableStateOf(false) }
     var skin by remember { mutableStateOf(SkinRepository.findSkin(context, skinId)) }
-    var applied by remember {
-        mutableStateOf(TimerPreferences.get(context).load().selectedCharacterSkinId == skinId)
+    fun computeApplied(entitledNow: Boolean = computeEntitled()): Boolean {
+        val d = TimerPreferences.get(context).load()
+        return entitledNow &&
+            d.selectedCharacterSkinId == skinId &&
+            d.selectedTimerSkinId == skinId
     }
+
+    var applied by remember { mutableStateOf(computeApplied()) }
     var wishlisted by remember { mutableStateOf(skinId in TimerPreferences.get(context).loadFavoriteSkinIds()) }
     // 유료 상품의 현지화 가격(formattedPrice). SKU 미등록이면 null → catalog 가격으로 폴백.
     var priceText by remember { mutableStateOf<String?>(null) }
@@ -152,11 +183,11 @@ fun DetailScreen(
     DisposableEffect(lifecycleOwner) {
         val obs = LifecycleEventObserver { _, e ->
             if (e == Lifecycle.Event.ON_RESUME) {
-                entitled = computeEntitled()
-                downloaded = SkinDownloader.isDownloaded(context, skinId)
+                val nextEntitled = computeEntitled()
+                entitled = nextEntitled
                 skin = SkinRepository.findSkin(context, skinId)
                 val d = TimerPreferences.get(context).load()
-                applied = d.selectedCharacterSkinId == skinId
+                applied = computeApplied(nextEntitled)
                 hasPass = d.hasLifetimePass
             }
         }
@@ -186,9 +217,9 @@ fun DetailScreen(
     // 미보유: prevNN을 앞에서부터 순차 탐침(첫 결번에서 중단)해 '존재하는 URL'만 모은다. 표시는 Coil(RemoteImage).
     val previews = remember { mutableStateListOf<String>() }
     var cancelled by remember { mutableStateOf(false) }
-    DisposableEffect(skinId, downloaded) {
+    DisposableEffect(skinId, skin != null) {
         cancelled = false
-        if (!downloaded) {
+        if (skin == null) {
             previews.clear()
             val candidates = (1..MAX_PREVIEWS).map { SkinRepoUrls.previewCandidates(skinId, it, previewBase) }
             RemoteImageLoader.resolveGallery(
@@ -266,7 +297,7 @@ fun DetailScreen(
         Spacer(Modifier.height(12.dp))
 
         val localSkin = skin
-        if (downloaded && localSkin != null) {
+        if (localSkin != null) {
             // 보유: '실제 위젯 작동' 인터랙티브 미리보기(샌드박스). 캐러셀 대신 단일 위젯을 띄운다.
             val previewState = remember(skinId) { mutableStateOf(initialPreviewData(context, skinId)) }
             Box(
@@ -362,7 +393,7 @@ fun DetailScreen(
                     onDone = { success ->
                         downloadProgress = null
                         downloadFailed = !success
-                        if (success) { downloaded = true; skin = SkinRepository.findSkin(context, skinId) }
+                        if (success) { skin = SkinRepository.findSkin(context, skinId) }
                     },
                 )
             } else {
@@ -377,7 +408,7 @@ fun DetailScreen(
                         onComplete = { success ->
                             downloadProgress = null
                             downloadFailed = !success
-                            if (success) { downloaded = true; skin = SkinRepository.findSkin(context, skinId) }
+                            if (success) { skin = SkinRepository.findSkin(context, skinId) }
                             Toast.makeText(
                                 context,
                                 if (success) "$name ${context.getString(R.string.skin_download_complete)}"
@@ -405,7 +436,7 @@ fun DetailScreen(
                 if (details == null) {
                     Toast.makeText(context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
                 } else {
-                    // 구매 결과는 비동기 도착 → ON_RESUME에서 entitled/downloaded가 갱신된다.
+                    // 구매 결과는 비동기 도착 → ON_RESUME에서 entitled/localRenderable이 갱신된다.
                     BillingManager.launchPurchase(act, details)
                 }
             }
@@ -430,9 +461,9 @@ fun DetailScreen(
 
         Button(
             onClick = {
-                when {
-                    downloading -> {}
-                    downloaded -> if (!applied) {
+                val localRenderable = skin != null
+                when (detailPrimaryAction(localRenderable, entitled, applied, downloading, saleExpired)) {
+                    DetailPrimaryAction.APPLY -> {
                         TimerController.selectCharacterSkin(context, skinId)
                         TimerController.selectTimerSkin(context, skinId)
                         applied = true
@@ -441,12 +472,12 @@ fun DetailScreen(
                             Toast.LENGTH_SHORT
                         ).show()
                     }
-                    entitled -> startEntitledDownload()
-                    else -> startPurchase()
+                    DetailPrimaryAction.DOWNLOAD -> startEntitledDownload()
+                    DetailPrimaryAction.BUY -> startPurchase()
+                    DetailPrimaryAction.NONE -> {}
                 }
             },
-            // 다운로드+적용중이면 비활성. 미보유 + 기간만료면 구매 불가.
-            enabled = !(downloading || (downloaded && applied) || (saleExpired && !entitled)),
+            enabled = detailPrimaryAction(skin != null, entitled, applied, downloading, saleExpired) != DetailPrimaryAction.NONE,
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = AppColors.Primary,
@@ -456,8 +487,8 @@ fun DetailScreen(
         ) {
             val label = when {
                 downloading -> stringResource(R.string.skin_btn_downloading)
-                downloaded -> stringResource(if (applied) R.string.detail_applied else R.string.detail_apply)
-                downloadFailed -> stringResource(R.string.skin_btn_retry)
+                skin != null && entitled -> stringResource(if (applied) R.string.detail_applied else R.string.detail_apply)
+                downloadFailed && entitled -> stringResource(R.string.skin_btn_retry)
                 entitled -> stringResource(R.string.skin_btn_download)
                 saleExpired -> stringResource(R.string.sale_expired)
                 else -> priceLabel

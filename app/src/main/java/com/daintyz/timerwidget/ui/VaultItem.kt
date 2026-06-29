@@ -44,17 +44,21 @@ sealed interface VaultItem {
     /** 현재 기기 날짜 기준 판매 상태. 로컬(보유/내장) 스킨은 saleStart/End가 없어 항상 ACTIVE. */
     val saleStatus: SaleStatus get() = saleWindowStatus(saleStart, saleEnd)
 
-    data class Local(val skin: Skin, override val owned: Boolean) : VaultItem {
+    data class Local(
+        val skin: Skin,
+        override val owned: Boolean,
+        val catalogEntry: RemoteSkinEntry? = null
+    ) : VaultItem {
         override val id get() = skin.skinId
-        override val name get() = skin.name
-        override val isFree get() = skin.isFree
-        override val price get() = 0
-        override val prestige get() = skin.prestige
-        override val productId: String? get() = null
-        override val description get() = skin.description
-        override val createdAt get() = skin.createdAt
-        override val saleStart get() = null
-        override val saleEnd get() = null
+        override val name get() = catalogEntry?.name ?: skin.name
+        override val isFree get() = catalogEntry?.isFree ?: skin.isFree
+        override val price get() = catalogEntry?.price ?: 0
+        override val prestige get() = catalogEntry?.prestige ?: skin.prestige
+        override val productId: String? get() = catalogEntry?.productId
+        override val description get() = catalogEntry?.description ?: skin.description
+        override val createdAt get() = catalogEntry?.createdAt ?: skin.createdAt
+        override val saleStart get() = catalogEntry?.saleStart
+        override val saleEnd get() = catalogEntry?.saleEnd
     }
 
     data class Remote(val entry: RemoteSkinEntry, override val owned: Boolean = false) : VaultItem {

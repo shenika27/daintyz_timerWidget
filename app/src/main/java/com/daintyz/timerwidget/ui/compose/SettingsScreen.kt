@@ -61,13 +61,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.daintyz.timerwidget.billing.BillingManager
+import com.daintyz.timerwidget.billing.EntitlementSync
 import com.daintyz.timerwidget.controller.TimerController
 import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.LayoutMode
 import com.daintyz.timerwidget.notification.TimerNotifications
 import com.daintyz.timerwidget.skin.GiftCodeRedeemer
-import com.daintyz.timerwidget.skin.SkinDownloader
-import com.daintyz.timerwidget.skin.SkinRepoUrls
 import com.daintyz.timerwidget.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -259,17 +258,9 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                 {
                     scope.launch {
                         restoring = true
-                        // Play 구매내역을 다시 조회해 권한을 복원한다. productId→skinId는 catalog에서.
-                        val map = withContext(Dispatchers.IO) {
-                            runCatching { SkinDownloader.fetchCatalog(SkinRepoUrls.CATALOG_URL) }
-                                .getOrNull()
-                                ?.mapNotNull { e -> e.productId?.let { it to e.skinId } }
-                                ?.toMap()
-                                .orEmpty()
-                        }
-                        BillingManager.syncEntitlements(context, map)
+                        val result = EntitlementSync.syncFromPlayAndCleanup(context)
                         restoring = false
-                        toast(context, "구매 내역을 확인했어요")
+                        toast(context, if (result.synced) "구매 내역을 확인했어요" else "구매 내역 확인에 실패했어요")
                     }
                 }
             },

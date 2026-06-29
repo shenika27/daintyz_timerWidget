@@ -35,7 +35,6 @@ class DetailActivity : AppCompatActivity() {
 
         val skinId = intent.getStringExtra(EXTRA_SKIN_ID) ?: run { finish(); return }
         val name = intent.getStringExtra(EXTRA_NAME) ?: skinId
-        val owned = intent.getBooleanExtra(EXTRA_OWNED, false)
         val isFree = intent.getBooleanExtra(EXTRA_IS_FREE, true)
         val price = intent.getIntExtra(EXTRA_PRICE, 0)
         val prestige = intent.getBooleanExtra(EXTRA_PRESTIGE, false)
@@ -51,7 +50,6 @@ class DetailActivity : AppCompatActivity() {
                     DetailScreen(
                         skinId = skinId,
                         name = name,
-                        initialOwned = owned,
                         isFree = isFree,
                         price = price,
                         prestige = prestige,

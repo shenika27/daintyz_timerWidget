@@ -21,6 +21,16 @@ object SkinDownloader {
     fun isDownloaded(context: Context, skinId: String): Boolean =
         File(skinsDir(context), "$skinId/skin.json").exists()
 
+    fun deleteDownloaded(context: Context, skinId: String): Boolean {
+        val root = skinsDir(context).canonicalFile
+        val target = File(root, skinId).canonicalFile
+        if (!target.path.startsWith(root.path + File.separator)) return false
+        if (!target.exists()) return true
+        val deleted = target.deleteRecursively()
+        if (deleted) SkinRepository.clearCache()
+        return deleted
+    }
+
     /**
      * catalog.json을 가져온다. 블로킹 호출 — 반드시 백그라운드 스레드에서 실행.
      *

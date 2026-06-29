@@ -126,16 +126,16 @@ object BillingManager {
      *
      * @param productIdToSkinId catalog에서 만든 productId→skinId 매핑(평생이용권 SKU는 제외).
      */
-    suspend fun syncEntitlements(context: Context, productIdToSkinId: Map<String, String>) {
+    suspend fun syncEntitlements(context: Context, productIdToSkinId: Map<String, String>): Boolean {
         this.productIdToSkinId = productIdToSkinId
-        val c = ensureReady(context) ?: return
+        val c = ensureReady(context) ?: return false
         val params = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
         val result = c.queryPurchasesAsync(params)
         if (result.billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
             Log.w(TAG, "구매내역 조회 실패: ${result.billingResult.responseCode}")
-            return
+            return false
         }
         val owned = result.purchasesList.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
 
@@ -155,6 +155,7 @@ object BillingManager {
             it.copy(purchasedSkinIds = skinIds, hasLifetimePass = hasPass)
         }
         onEntitlementsChanged?.invoke()
+        return true
     }
 
     /**

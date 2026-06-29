@@ -101,13 +101,14 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
 
     val items = remember(localSkins, catalog, purchased, hasPass, giftUnlocked, favoriteIds, showAll, wishlistOnly) {
         val localIds = localSkins.map { it.skinId }.toSet()
+        val catalogById = catalog.associateBy { it.skinId }
         buildList {
             for (skin in localSkins) {
                 // 앱 내장 기본 에셋(예: cha01)은 상점에 노출하지 않는다 — 상점은 디자인 레포 항목만.
                 if (skin.bundled) continue
                 val owned = SkinAvailabilityChecker.isSkinAvailable(skin, purchased, hasPass, giftUnlocked)
                 if (owned && !showAll) continue
-                add(VaultItem.Local(skin, owned))
+                add(VaultItem.Local(skin, owned, catalogById[skin.skinId]))
             }
             for (entry in catalog) {
                 // 숨김 스킨은 상점 목록에서 제외(기프트코드/링크 전용). 이미 보유한 경우엔

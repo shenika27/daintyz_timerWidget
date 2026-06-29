@@ -106,6 +106,7 @@ dependencies {
 
     // ---- 결제(Google Play Billing): 개별구매 + 평생이용권. ktx = suspend 확장 포함 ----
     implementation("com.android.billingclient:billing-ktx:7.1.1")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.test:core:1.6.1")

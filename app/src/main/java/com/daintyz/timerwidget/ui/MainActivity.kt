@@ -34,11 +34,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.daintyz.timerwidget.R
 import com.daintyz.timerwidget.billing.BillingManager
-import com.daintyz.timerwidget.skin.SkinDownloader
+import com.daintyz.timerwidget.billing.EntitlementSync
 import com.daintyz.timerwidget.skin.SkinRepoUrls
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import com.daintyz.timerwidget.ui.compose.AdaptiveContent
 import com.daintyz.timerwidget.ui.compose.AppColors
 import com.daintyz.timerwidget.ui.compose.AppTheme
@@ -46,6 +44,7 @@ import com.daintyz.timerwidget.ui.compose.SettingsScreen
 import com.daintyz.timerwidget.ui.compose.StoreScreen
 import com.daintyz.timerwidget.ui.compose.VaultScreen
 import com.daintyz.timerwidget.ui.compose.isExpandedScreen
+import com.daintyz.timerwidget.widget.WidgetUpdater
 
 /**
  * 앱 셸 (Compose). 하단 탭(보유/상점/설정)으로 세 화면을 전환한다. 첫 화면은 보유(창고).
@@ -96,16 +95,11 @@ class MainActivity : AppCompatActivity() {
      * 기프트 해금분은 출처가 달라 동기화 대상이 아니다(보존).
      */
     private fun syncEntitlementsFromPlay() {
-        BillingManager.start(applicationContext)
+        BillingManager.start(applicationContext) {
+            WidgetUpdater.updateAllWidgets(applicationContext)
+        }
         lifecycleScope.launch {
-            val map = withContext(Dispatchers.IO) {
-                runCatching { SkinDownloader.fetchCatalog(SkinRepoUrls.CATALOG_URL) }
-                    .getOrNull()
-                    ?.mapNotNull { entry -> entry.productId?.let { it to entry.skinId } }
-                    ?.toMap()
-                    .orEmpty()
-            }
-            BillingManager.syncEntitlements(applicationContext, map)
+            EntitlementSync.syncFromPlayAndCleanup(applicationContext)
         }
     }
 

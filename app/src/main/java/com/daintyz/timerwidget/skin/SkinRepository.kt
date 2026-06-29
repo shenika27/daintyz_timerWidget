@@ -31,6 +31,9 @@ object SkinRepository {
     @Volatile
     private var cachedSkins: List<Skin>? = null
 
+    @Volatile
+    private var cachedBundledSkins: List<Skin>? = null
+
     private val bitmapCache = java.util.concurrent.ConcurrentHashMap<String, Bitmap>()
     private val typefaceCache = java.util.concurrent.ConcurrentHashMap<String, Typeface>()
 
@@ -49,6 +52,20 @@ object SkinRepository {
 
     fun findSkin(context: Context, skinId: String): Skin? =
         loadAllSkins(context).firstOrNull { it.skinId == skinId }
+
+    /**
+     * assets/skins 에 내장된 스킨만 로드한다. 다운로드 스킨이 같은 skinId를 덮어써도 여기엔 섞이지 않는다.
+     * 권한 회수 시 위젯 fallback은 이 목록의 무료 스킨만 사용해야 한다.
+     */
+    fun loadBundledSkins(context: Context): List<Skin> {
+        cachedBundledSkins?.let { return it }
+        synchronized(this) {
+            cachedBundledSkins?.let { return it }
+            val bundled = loadFromAssets(context)
+            cachedBundledSkins = bundled
+            return bundled
+        }
+    }
 
     /**
      * 프레임 PNG를 Bitmap으로 로드.
@@ -95,6 +112,7 @@ object SkinRepository {
 
     fun clearCache() {
         cachedSkins = null
+        cachedBundledSkins = null
         bitmapCache.clear()
         typefaceCache.clear()
     }

@@ -319,10 +319,11 @@ private fun buildDisplayList(
     favOnly: Boolean,
 ): List<VaultItem> {
     val localIds = localSkins.map { it.skinId }.toSet()
+    val catalogById = catalog.associateBy { it.skinId }
     val all = buildList {
         for (skin in localSkins) {
             val owned = SkinAvailabilityChecker.isSkinAvailable(skin, purchased, hasPass, giftUnlocked)
-            add(VaultItem.Local(skin, owned))
+            add(VaultItem.Local(skin, owned, catalogById[skin.skinId]))
         }
         for (entry in catalog) {
             if (entry.hidden) continue

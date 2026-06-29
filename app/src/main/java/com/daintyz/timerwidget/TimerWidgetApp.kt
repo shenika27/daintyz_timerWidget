@@ -6,6 +6,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
+import com.daintyz.timerwidget.billing.EntitlementSyncWorker
 
 /**
  * Coil 전역 [ImageLoader] 제공자. GIF/애니 WebP 디코더를 등록해 미리보기 등에서 애니메이션 이미지를 표시한다.
@@ -14,6 +15,11 @@ import coil.decode.ImageDecoderDecoder
  * Coil 싱글톤이 [ImageLoaderFactory]를 자동으로 사용한다(AsyncImage 등이 이 로더를 공유).
  */
 class TimerWidgetApp : Application(), ImageLoaderFactory {
+    override fun onCreate() {
+        super.onCreate()
+        EntitlementSyncWorker.enqueue(this)
+    }
+
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this)
             .components {

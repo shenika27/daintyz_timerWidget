@@ -24,6 +24,7 @@ import com.daintyz.timerwidget.model.TimerData
 import com.daintyz.timerwidget.model.TimerState
 import com.daintyz.timerwidget.receiver.TimerActionReceiver
 import com.daintyz.timerwidget.skin.FrameAnimationController
+import com.daintyz.timerwidget.skin.SkinAvailabilityChecker
 import com.daintyz.timerwidget.skin.SkinRepository
 
 /**
@@ -50,6 +51,9 @@ object WidgetUpdater {
     /**
      * @param forPreview 미리보기(앱 내 [RemoteViews.apply] 렌더)용이면 true.
      *   버튼/캐릭터 클릭 PendingIntent 바인딩을 건너뛴다 — 미리보기 탭이 실제 타이머 상태를 바꾸지 않도록.
+     *
+     * 이 함수는 1초 틱 경로에서도 호출된다. Billing/네트워크 동기화는 절대 여기서 하지 않고,
+     * 이미 [TimerData]에 캐시된 권한만 사용해 렌더링 여부를 판단한다.
      */
     fun buildRemoteViews(
         context: Context,
@@ -64,11 +68,11 @@ object WidgetUpdater {
         val views = RemoteViews(context.packageName, layoutRes)
 
         // 캐릭터와 타이머는 서로 다른 스킨(테마)에서 올 수 있다 — 사용자가 독립 선택.
-        // 각 영역의 비트맵은 그 영역 스킨의 skinId 폴더에서 로드되므로, 타이머용 함수엔 timerSkin을,
-        // 캐릭터용 함수엔 characterSkin을 넘긴다. 못 찾으면 첫 스킨으로 폴백.
-        val fallback = SkinRepository.loadAllSkins(context).firstOrNull()
-        val characterSkin = SkinRepository.findSkin(context, data.selectedCharacterSkinId) ?: fallback
-        val timerSkin = SkinRepository.findSkin(context, data.selectedTimerSkinId) ?: fallback
+        // 로컬 파일이 남아 있어도 현재 Play/기프트 권한이 없으면 렌더링하지 않고 기본 스킨으로 폴백한다.
+        val skins = SkinRepository.loadAllSkins(context)
+        val bundledFallbackSkins = SkinRepository.loadBundledSkins(context)
+        val characterSkin = resolveRenderableSkin(data.selectedCharacterSkinId, skins, bundledFallbackSkins, data)
+        val timerSkin = resolveRenderableSkin(data.selectedTimerSkinId, skins, bundledFallbackSkins, data)
 
         applyTimerText(context, views, data, nowElapsed, timerSkin)
         applyButtonVisibility(views, data.state)
@@ -81,6 +85,28 @@ object WidgetUpdater {
         }
 
         return views
+    }
+
+    internal fun resolveRenderableSkin(
+        selectedSkinId: String,
+        skins: List<Skin>,
+        bundledFallbackSkins: List<Skin>,
+        data: TimerData
+    ): Skin? {
+        fun Skin.available() = SkinAvailabilityChecker.isSkinAvailable(
+            this,
+            purchasedSkinIds = data.purchasedSkinIds,
+            hasLifetimePass = data.hasLifetimePass,
+            giftUnlockedSkinIds = data.giftUnlockedSkinIds
+        )
+
+        val selected = skins.firstOrNull { it.skinId == selectedSkinId }
+        if (selected != null && selected.available()) return selected
+
+        val bundledFree = bundledFallbackSkins.filter { it.bundled && it.isFree }
+        bundledFree.firstOrNull { it.skinId == TimerPreferences.DEFAULT_SKIN_ID }?.let { return it }
+
+        return bundledFree.firstOrNull()
     }
 
     // ---- 시간 텍스트 ----
