@@ -56,7 +56,8 @@ zip 파일명은 **`{skinId}.zip`** (예: `cloud.zip`). Worker가 이 키로 찾
 npx wrangler r2 object put daintyz-skins/cloud.zip --file=./cloud.zip
 ```
 - 무료 스킨은 기존 공개 CDN(jsDelivr)에 그대로 두면 된다. R2엔 **유료/프리스티지만** 올린다.
-- 신규 유료 스킨 출시 자동화([skin-bundle-automation])에 "R2 업로드" 단계를 붙이면 수작업이 사라진다(추후).
+- 신규 유료 스킨 출시 자동화(디자인레포 `skin-deploy.yml`)가 **R2 업로드 + Play 인앱상품 등록까지 자동**으로 한다 —
+  유료 zip 수동 업로드/SKU 수동 생성은 더 안 해도 된다(디자인레포 README "유료 스킨 → Play 인앱상품 자동 등록" 참고).
 
 ## 2. GCP 서비스계정 (Google Cloud)
 
