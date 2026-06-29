@@ -66,6 +66,9 @@
     <string name="store_wishlist_only">찜한 항목만 보기</string>
     <string name="store_set_label">캐릭터 + 타이머 세트</string>
     <string name="store_buy_stub">결제 기능은 곧 찾아올게요!</string>
+    <!-- 평생이용권(프리스티지 제외 유료 테마 일괄 해금) -->
+    <string name="lifetime_pass_buy">평생이용권 구매</string>
+    <string name="lifetime_pass_owned">평생이용권 보유 중</string>
     <!-- 한정판매 종료 -->
     <string name="sale_expired">판매 종료</string>
     <!-- 프리스티지(희귀) 스킨 배지 — 디자인 추후, 텍스트 틀만 -->

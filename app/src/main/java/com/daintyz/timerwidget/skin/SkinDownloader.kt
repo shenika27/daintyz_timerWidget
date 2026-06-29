@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.daintyz.timerwidget.billing.BillingConfig
 import com.daintyz.timerwidget.model.RemoteSkinEntry
 import org.json.JSONObject
 import java.io.File
@@ -76,6 +77,7 @@ object SkinDownloader {
                         name = obj.getString("name"),
                         price = price,
                         isFree = price <= 0,
+                        productId = obj.optString("productId").ifBlank { null },
                         prestige = obj.optBoolean("prestige", false),
                         zipUrl = obj.optString("zipUrl").ifBlank { "$baseUrl/character/zip/$skinId.zip" },
                         thumbnailUrl = obj.optString("thumbnailUrl")
@@ -119,65 +121,135 @@ object SkinDownloader {
                 val destDir = File(skinsDir(context), entry.skinId).also { it.mkdirs() }
                 val tempZip = File(context.cacheDir, "${entry.skinId}_dl.zip")
 
-                val conn = URL(entry.zipUrl).openConnection() as HttpURLConnection
-                conn.connectTimeout = 15_000
-                conn.readTimeout = 30_000
+                val conn = (URL(entry.zipUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15_000
+                    readTimeout = 30_000
+                }
                 conn.connect()
-                val total = conn.contentLength.toLong()
-                var received = 0L
-                var lastReported = Int.MIN_VALUE
-                if (total <= 0L) reportProgress(-1)
-                conn.inputStream.use { input ->
-                    tempZip.outputStream().use { output ->
-                        val buf = ByteArray(8192)
-                        var n: Int
-                        while (input.read(buf).also { n = it } != -1) {
-                            output.write(buf, 0, n)
-                            received += n
-                            if (total > 0L) {
-                                val percent = (received * 100 / total).toInt().coerceIn(0, 100)
-                                if (percent != lastReported) {
-                                    lastReported = percent
-                                    reportProgress(percent)
-                                }
-                            }
-                        }
-                    }
-                }
+                streamWithProgress(conn, tempZip, ::reportProgress)
                 conn.disconnect()
-
-                // zip이 폴더째(예: muk/skin.json) 압축된 경우 공통 래퍼 폴더를 벗겨서
-                // filesDir/skins/{skinId}/skin.json 위치에 평탄하게 풀리도록 한다.
-                val rootPrefix = detectCommonRoot(tempZip)
-
-                // ZIP path traversal 방지
-                val destCanonical = destDir.canonicalPath + File.separator
-                ZipInputStream(tempZip.inputStream()).use { zip ->
-                    var ze = zip.nextEntry
-                    while (ze != null) {
-                        val relativeName =
-                            if (rootPrefix != null) ze.name.removePrefix(rootPrefix) else ze.name
-                        if (relativeName.isEmpty()) { zip.closeEntry(); ze = zip.nextEntry; continue }
-                        val outFile = File(destDir, relativeName)
-                        check(outFile.canonicalPath.startsWith(destCanonical)) {
-                            "ZIP path traversal 차단: ${ze.name}"
-                        }
-                        if (ze.isDirectory) outFile.mkdirs()
-                        else {
-                            outFile.parentFile?.mkdirs()
-                            outFile.outputStream().use { zip.copyTo(it) }
-                        }
-                        zip.closeEntry()
-                        ze = zip.nextEntry
-                    }
-                }
-                tempZip.delete()
-                SkinRepository.clearCache()
+                extractZipFlat(tempZip, destDir)
             }.isSuccess
 
             if (!success) Log.e(TAG, "다운로드 실패: ${entry.skinId}")
             mainHandler.post { onComplete(success) }
         }.start()
+    }
+
+    /**
+     * 유료(보호) 스킨을 결제 검증 Worker로부터 받는다([BillingConfig.downloadUrl]).
+     * 앱이 가진 영수증 토큰을 POST 바디로 보내고, Worker가 Play로 검증해 통과하면 zip을 스트리밍한다.
+     * (무료 스킨은 [download]의 공개 CDN 경로를 그대로 쓴다.)
+     *
+     * @param purchaseToken 그 스킨 productId의 Play 영수증(낱개구매). 없으면 null.
+     * @param passToken      평생이용권 영수증. 없으면 null. (비프리스티지면 이용권 토큰만으로도 통과)
+     */
+    fun downloadFromWorker(
+        context: Context,
+        skinId: String,
+        purchaseToken: String?,
+        passToken: String?,
+        onProgress: (percent: Int) -> Unit,
+        onComplete: (success: Boolean) -> Unit
+    ) {
+        Thread {
+            val mainHandler = Handler(Looper.getMainLooper())
+            fun reportProgress(percent: Int) = mainHandler.post { onProgress(percent) }
+            val success = runCatching {
+                check(BillingConfig.isConfigured) { "Worker 주소(BillingConfig.WORKER_BASE_URL) 미설정" }
+                val destDir = File(skinsDir(context), skinId).also { it.mkdirs() }
+                val tempZip = File(context.cacheDir, "${skinId}_dl.zip")
+
+                val body = JSONObject().apply {
+                    put("skinId", skinId)
+                    if (!purchaseToken.isNullOrBlank()) put("purchaseToken", purchaseToken)
+                    if (!passToken.isNullOrBlank()) put("passToken", passToken)
+                }.toString()
+
+                val conn = (URL(BillingConfig.downloadUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15_000
+                    readTimeout = 30_000
+                    requestMethod = "POST"
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("Accept", "application/zip")
+                }
+                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                // 403(미보유)/404 등은 예외로 떨궈 실패 처리. 토큰/사유는 로그에 남기지 않는다.
+                check(conn.responseCode == HttpURLConnection.HTTP_OK) {
+                    "보호 다운로드 거부: ${conn.responseCode}"
+                }
+                streamWithProgress(conn, tempZip, ::reportProgress)
+                conn.disconnect()
+                extractZipFlat(tempZip, destDir)
+            }.isSuccess
+
+            if (!success) Log.e(TAG, "보호 다운로드 실패: $skinId")
+            mainHandler.post { onComplete(success) }
+        }.start()
+    }
+
+    /** 연결된 [conn]의 본문을 [tempZip]에 받으며 진행률을 보고한다(전체 크기 미상이면 -1 1회). */
+    private fun streamWithProgress(
+        conn: HttpURLConnection,
+        tempZip: File,
+        reportProgress: (Int) -> Unit,
+    ) {
+        val total = conn.contentLength.toLong()
+        var received = 0L
+        var lastReported = Int.MIN_VALUE
+        if (total <= 0L) reportProgress(-1)
+        conn.inputStream.use { input ->
+            tempZip.outputStream().use { output ->
+                val buf = ByteArray(8192)
+                var n: Int
+                while (input.read(buf).also { n = it } != -1) {
+                    output.write(buf, 0, n)
+                    received += n
+                    if (total > 0L) {
+                        val percent = (received * 100 / total).toInt().coerceIn(0, 100)
+                        if (percent != lastReported) {
+                            lastReported = percent
+                            reportProgress(percent)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * [tempZip]을 filesDir/skins/{skinId}/ 아래에 평탄하게 푼다(공통 래퍼 폴더 제거 + path traversal 차단).
+     * 완료 후 tempZip을 지우고 스킨 캐시를 무효화한다.
+     */
+    private fun extractZipFlat(tempZip: File, destDir: File) {
+        // zip이 폴더째(예: muk/skin.json) 압축된 경우 공통 래퍼 폴더를 벗겨서
+        // filesDir/skins/{skinId}/skin.json 위치에 평탄하게 풀리도록 한다.
+        val rootPrefix = detectCommonRoot(tempZip)
+
+        // ZIP path traversal 방지
+        val destCanonical = destDir.canonicalPath + File.separator
+        ZipInputStream(tempZip.inputStream()).use { zip ->
+            var ze = zip.nextEntry
+            while (ze != null) {
+                val relativeName =
+                    if (rootPrefix != null) ze.name.removePrefix(rootPrefix) else ze.name
+                if (relativeName.isEmpty()) { zip.closeEntry(); ze = zip.nextEntry; continue }
+                val outFile = File(destDir, relativeName)
+                check(outFile.canonicalPath.startsWith(destCanonical)) {
+                    "ZIP path traversal 차단: ${ze.name}"
+                }
+                if (ze.isDirectory) outFile.mkdirs()
+                else {
+                    outFile.parentFile?.mkdirs()
+                    outFile.outputStream().use { zip.copyTo(it) }
+                }
+                zip.closeEntry()
+                ze = zip.nextEntry
+            }
+        }
+        tempZip.delete()
+        SkinRepository.clearCache()
     }
 
     /**

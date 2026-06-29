@@ -71,6 +71,7 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
     var catalog by remember { mutableStateOf(emptyList<RemoteSkinEntry>()) }
     var purchased by remember { mutableStateOf(emptySet<String>()) }
     var hasPass by remember { mutableStateOf(false) }
+    var giftUnlocked by remember { mutableStateOf(emptySet<String>()) }
     var favoriteIds by remember { mutableStateOf(TimerPreferences.get(context).loadFavoriteSkinIds()) }
     var showAll by rememberSaveable { mutableStateOf(false) }
     var wishlistOnly by rememberSaveable { mutableStateOf(false) }
@@ -79,6 +80,7 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
         val data = TimerPreferences.get(context).load()
         purchased = data.purchasedSkinIds
         hasPass = data.hasLifetimePass
+        giftUnlocked = data.giftUnlockedSkinIds
         favoriteIds = TimerPreferences.get(context).loadFavoriteSkinIds()
         localSkins = SkinRepository.loadAllSkins(context)
     }
@@ -97,13 +99,13 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
         if (entries != null) catalog = entries
     }
 
-    val items = remember(localSkins, catalog, purchased, hasPass, favoriteIds, showAll, wishlistOnly) {
+    val items = remember(localSkins, catalog, purchased, hasPass, giftUnlocked, favoriteIds, showAll, wishlistOnly) {
         val localIds = localSkins.map { it.skinId }.toSet()
         buildList {
             for (skin in localSkins) {
                 // 앱 내장 기본 에셋(예: cha01)은 상점에 노출하지 않는다 — 상점은 디자인 레포 항목만.
                 if (skin.bundled) continue
-                val owned = SkinAvailabilityChecker.isSkinAvailable(skin, purchased, hasPass)
+                val owned = SkinAvailabilityChecker.isSkinAvailable(skin, purchased, hasPass, giftUnlocked)
                 if (owned && !showAll) continue
                 add(VaultItem.Local(skin, owned))
             }
@@ -112,7 +114,12 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
                 // 로컬 스킨으로 위에서 처리되므로 여기서 빠져도 창고/표시에 영향 없음.
                 if (entry.hidden) continue
                 if (entry.skinId in localIds) continue
-                val remote = VaultItem.Remote(entry)
+                // 이용권/구매/기프트로 이미 권리가 있는(미다운로드) 원격 테마는 보유로 간주 → 기본은 숨김(전체보기 시 노출).
+                val owned = SkinAvailabilityChecker.isSkinAvailable(
+                    entry.skinId, entry.isFree, entry.prestige, purchased, hasPass, giftUnlocked
+                )
+                if (owned && !showAll) continue
+                val remote = VaultItem.Remote(entry, owned)
                 // 한정구매: 시작 전(UPCOMING)은 미출시라 숨김. 종료 후(EXPIRED)는 카드는 두되 잠금 표시.
                 if (remote.saleStatus == SaleStatus.UPCOMING) continue
                 add(remote)

@@ -9,7 +9,7 @@ import java.util.concurrent.CountDownLatch
  * 기프트코드 해금 단일 지점.
  *
  * 동작: 입력 코드를 정규화(공백제거+대문자) → SHA-256(hex) → catalog의 [com.daintyz.timerwidget.model.RemoteSkinEntry.giftCodeHashes]
- * 와 대조 → 일치 스킨을 다운로드하고 구매목록(purchasedSkinIds)에 추가한다. 백엔드가 없어 검증은 클라이언트에서
+ * 와 대조 → 일치 스킨을 다운로드하고 기프트 해금목록(giftUnlockedSkinIds)에 추가한다. 백엔드가 없어 검증은 클라이언트에서
  * 일어나므로 catalog엔 평문이 아닌 해시만 둔다(빌더가 해시만 출력). 정규화 규칙은 빌더와 반드시 동일해야 한다.
  *
  * [redeem]은 네트워크(카탈로그 fetch + zip 다운로드)를 블로킹하므로 반드시 백그라운드 스레드에서 호출한다.
@@ -45,10 +45,14 @@ object GiftCodeRedeemer {
         val entry = catalog.firstOrNull { hash in it.giftCodeHashes } ?: return Result.Invalid
 
         val prefs = TimerPreferences.get(context)
-        if (entry.skinId in prefs.load().purchasedSkinIds) return Result.AlreadyOwned(entry.name)
+        // Play 구매분/기프트 해금분 어느 쪽으로든 이미 보유하면 중복 처리.
+        val data = prefs.load()
+        if (entry.skinId in data.purchasedSkinIds || entry.skinId in data.giftUnlockedSkinIds) {
+            return Result.AlreadyOwned(entry.name)
+        }
 
         if (!downloadBlocking(context.applicationContext, entry)) return Result.Error
-        prefs.addPurchasedSkinId(entry.skinId)
+        prefs.addGiftUnlockedSkinId(entry.skinId)
         SkinRepository.clearCache() // 새로 받은 스킨이 즉시 목록/창고에 반영되도록 캐시 무효화
         return Result.Success(entry.skinId, entry.name)
     }

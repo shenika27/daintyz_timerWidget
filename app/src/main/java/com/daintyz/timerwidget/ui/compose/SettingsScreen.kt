@@ -33,8 +33,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,11 +60,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.daintyz.timerwidget.billing.BillingManager
 import com.daintyz.timerwidget.controller.TimerController
 import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.LayoutMode
 import com.daintyz.timerwidget.notification.TimerNotifications
 import com.daintyz.timerwidget.skin.GiftCodeRedeemer
+import com.daintyz.timerwidget.skin.SkinDownloader
+import com.daintyz.timerwidget.skin.SkinRepoUrls
 import com.daintyz.timerwidget.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -89,6 +94,10 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
     var useSystemFont by remember { mutableStateOf(prefs.isUseSystemFont()) }
     var giftCode by remember { mutableStateOf(TextFieldValue("")) }
     var redeeming by remember { mutableStateOf(false) }
+    var restoring by remember { mutableStateOf(false) }
+    var hasPass by remember { mutableStateOf(prefs.load().hasLifetimePass) }
+    var passPriceText by remember { mutableStateOf<String?>(null) }
+    var buyingPass by remember { mutableStateOf(false) }
 
     val versionName = remember {
         runCatching {
@@ -103,6 +112,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             stepSec = TextFieldValue((data.stepSeconds % 60).toString())
         }
         layoutMode = data.layoutMode
+        hasPass = data.hasLifetimePass
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -110,6 +120,13 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
         val obs = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) sync() }
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+
+    // 평생이용권 가격(formattedPrice) 조회. SKU 미등록이면 null → '구매' 라벨만.
+    LaunchedEffect(Unit) {
+        passPriceText = withContext(Dispatchers.IO) {
+            BillingManager.lifetimePassDetails(context)
+        }?.oneTimePurchaseOfferDetails?.formattedPrice
     }
 
     Column(
@@ -206,6 +223,62 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             },
         ) {
             Icon(Icons.Filled.Refresh, contentDescription = null, tint = AppColors.Brown)
+        }
+        SettingRow(
+            title = "평생이용권",
+            subtitle = if (hasPass) "보유 중"
+                else passPriceText?.let { "$it · 프리스티지 제외 일괄 해금" }
+                    ?: "프리스티지 제외 유료 테마 일괄 해금",
+        ) {
+            if (hasPass) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AppColors.Primary)
+            } else {
+                SmallButton(if (buyingPass) "확인 중…" else "구매", enabled = !buyingPass) {
+                    val act = context.findActivity()
+                    if (act == null) {
+                        toast(context, "결제를 준비 중이에요")
+                    } else {
+                        scope.launch {
+                            buyingPass = true
+                            val details = withContext(Dispatchers.IO) {
+                                BillingManager.lifetimePassDetails(context)
+                            }
+                            buyingPass = false
+                            // 결과는 비동기 도착 → ON_RESUME의 sync()에서 hasPass 갱신.
+                            if (details == null) toast(context, "결제를 준비 중이에요")
+                            else BillingManager.launchPurchase(act, details)
+                        }
+                    }
+                }
+            }
+        }
+        SettingRow(
+            title = "구매 복원",
+            subtitle = "기기를 바꿨거나 앱을 다시 설치했을 때",
+            onClick = if (restoring) null else {
+                {
+                    scope.launch {
+                        restoring = true
+                        // Play 구매내역을 다시 조회해 권한을 복원한다. productId→skinId는 catalog에서.
+                        val map = withContext(Dispatchers.IO) {
+                            runCatching { SkinDownloader.fetchCatalog(SkinRepoUrls.CATALOG_URL) }
+                                .getOrNull()
+                                ?.mapNotNull { e -> e.productId?.let { it to e.skinId } }
+                                ?.toMap()
+                                .orEmpty()
+                        }
+                        BillingManager.syncEntitlements(context, map)
+                        restoring = false
+                        toast(context, "구매 내역을 확인했어요")
+                    }
+                }
+            },
+        ) {
+            if (restoring) {
+                Text("확인 중…", color = AppColors.Brown, fontSize = 13.sp)
+            } else {
+                Icon(Icons.Filled.Restore, contentDescription = null, tint = AppColors.Brown)
+            }
         }
         SettingRow("기프트코드") {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -1,5 +1,6 @@
 package com.daintyz.timerwidget.ui.compose
 
+import android.app.Activity
 import android.content.Context
 import android.os.SystemClock
 import android.view.View
@@ -41,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
@@ -55,7 +58,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.daintyz.timerwidget.R
+import com.daintyz.timerwidget.billing.BillingManager
 import com.daintyz.timerwidget.controller.TimerController
 import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.RemoteSkinEntry
@@ -66,7 +72,10 @@ import com.daintyz.timerwidget.skin.SkinRepoUrls
 import com.daintyz.timerwidget.skin.SkinDownloader
 import com.daintyz.timerwidget.skin.SkinRepository
 import com.daintyz.timerwidget.widget.WidgetUpdater
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.absoluteValue
 
 /** prevNN 미리보기 최대 탐침 수 (디자인레포 규칙상 prev01부터 연속, 첫 결번에서 중단). */
@@ -101,6 +110,7 @@ fun DetailScreen(
     isFree: Boolean,
     price: Int,
     prestige: Boolean,
+    productId: String? = null,
     previewBase: String,
     zipUrl: String?,
     saleExpired: Boolean = false,
@@ -108,8 +118,21 @@ fun DetailScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val activity = context.findActivity()
 
-    var owned by remember { mutableStateOf(initialOwned) }
+    // 권한(사용 권리) 판정 — SkinAvailabilityChecker와 동일 규칙. 원격(미다운로드) 항목도 이용권/구매/기프트면 true.
+    fun computeEntitled(): Boolean {
+        if (isFree) return true
+        val d = TimerPreferences.get(context).load()
+        if (skinId in d.purchasedSkinIds) return true
+        if (skinId in d.giftUnlockedSkinIds) return true
+        return d.hasLifetimePass && !prestige
+    }
+
+    // 권한(entitled)과 실제 파일 보유(downloaded)를 분리한다. 방금 구매/이용권/기프트는 entitled지만 아직 미다운로드일 수 있다.
+    var entitled by remember { mutableStateOf(initialOwned || computeEntitled()) }
+    var downloaded by remember { mutableStateOf(SkinDownloader.isDownloaded(context, skinId)) }
     var downloadProgress by remember { mutableStateOf<Int?>(null) }
     var downloadFailed by remember { mutableStateOf(false) }
     var skin by remember { mutableStateOf(SkinRepository.findSkin(context, skinId)) }
@@ -117,14 +140,55 @@ fun DetailScreen(
         mutableStateOf(TimerPreferences.get(context).load().selectedCharacterSkinId == skinId)
     }
     var wishlisted by remember { mutableStateOf(skinId in TimerPreferences.get(context).loadFavoriteSkinIds()) }
+    // 유료 상품의 현지화 가격(formattedPrice). SKU 미등록이면 null → catalog 가격으로 폴백.
+    var priceText by remember { mutableStateOf<String?>(null) }
+    // 평생이용권 보유 여부 + 가격(하단 '평생이용권 구매' 버튼 노출/표시용).
+    var hasPass by remember { mutableStateOf(TimerPreferences.get(context).load().hasLifetimePass) }
+    var passPriceText by remember { mutableStateOf<String?>(null) }
     val downloading = downloadProgress != null
+
+    // 화면 복귀(구매 다이얼로그 종료 등)마다 권한/다운로드 상태를 다시 읽어 버튼을 갱신한다.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, e ->
+            if (e == Lifecycle.Event.ON_RESUME) {
+                entitled = computeEntitled()
+                downloaded = SkinDownloader.isDownloaded(context, skinId)
+                skin = SkinRepository.findSkin(context, skinId)
+                val d = TimerPreferences.get(context).load()
+                applied = d.selectedCharacterSkinId == skinId
+                hasPass = d.hasLifetimePass
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+
+    // 유료 상품 가격 조회(Play 현지화 가격). SKU가 아직 없으면 빈 결과 → 폴백.
+    LaunchedEffect(productId, isFree) {
+        val pid = productId
+        if (!isFree && pid != null) {
+            priceText = withContext(Dispatchers.IO) {
+                BillingManager.productDetails(context, listOf(pid))
+            }.firstOrNull()?.oneTimePurchaseOfferDetails?.formattedPrice
+        }
+    }
+
+    // 평생이용권 가격 조회(프리스티지·무료 상세에선 버튼 자체가 없어 생략).
+    LaunchedEffect(isFree, prestige) {
+        if (!isFree && !prestige) {
+            passPriceText = withContext(Dispatchers.IO) {
+                BillingManager.lifetimePassDetails(context)
+            }?.oneTimePurchaseOfferDetails?.formattedPrice
+        }
+    }
 
     // 미보유: prevNN을 앞에서부터 순차 탐침(첫 결번에서 중단)해 '존재하는 URL'만 모은다. 표시는 Coil(RemoteImage).
     val previews = remember { mutableStateListOf<String>() }
     var cancelled by remember { mutableStateOf(false) }
-    DisposableEffect(skinId, owned) {
+    DisposableEffect(skinId, downloaded) {
         cancelled = false
-        if (!owned) {
+        if (!downloaded) {
             previews.clear()
             val candidates = (1..MAX_PREVIEWS).map { SkinRepoUrls.previewCandidates(skinId, it, previewBase) }
             RemoteImageLoader.resolveGallery(
@@ -174,7 +238,7 @@ fun DetailScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 48.dp),
             )
-            if (showWishlist && !owned) {
+            if (showWishlist && !entitled) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -202,7 +266,7 @@ fun DetailScreen(
         Spacer(Modifier.height(12.dp))
 
         val localSkin = skin
-        if (owned && localSkin != null) {
+        if (downloaded && localSkin != null) {
             // 보유: '실제 위젯 작동' 인터랙티브 미리보기(샌드박스). 캐러셀 대신 단일 위젯을 띄운다.
             val previewState = remember(skinId) { mutableStateOf(initialPreviewData(context, skinId)) }
             Box(
@@ -281,16 +345,94 @@ fun DetailScreen(
 
         Spacer(Modifier.weight(1f))
 
-        // 하단 액션 버튼.
-        val buyLabel = if (isFree || price <= 0) {
-            stringResource(R.string.skin_btn_download)
-        } else {
-            stringResource(R.string.detail_buy_price, "%,d원".format(price))
+        // 하단 액션 버튼: 다운로드됨→적용 / 보유O 미다운로드→다운로드(무료=공개·유료=Worker) / 미보유 유료→구매.
+        val priceLabel = priceText
+            ?: if (isFree || price <= 0) stringResource(R.string.skin_btn_download)
+            else stringResource(R.string.detail_buy_price, "%,d원".format(price))
+
+        // 보유했지만 파일이 아직 없는 경우의 다운로드. 무료=공개 CDN, 유료=결제검증 Worker(영수증 토큰 첨부).
+        fun startEntitledDownload() {
+            downloadProgress = -1
+            downloadFailed = false
+            if (isFree) {
+                startDownload(
+                    context, skinId, name, isFree, price, prestige, previewBase, zipUrl,
+                    onStart = {},
+                    onProgress = { percent -> downloadProgress = percent },
+                    onDone = { success ->
+                        downloadProgress = null
+                        downloadFailed = !success
+                        if (success) { downloaded = true; skin = SkinRepository.findSkin(context, skinId) }
+                    },
+                )
+            } else {
+                scope.launch {
+                    val tokens = withContext(Dispatchers.IO) { BillingManager.ownedTokens(context) }
+                    SkinDownloader.downloadFromWorker(
+                        context = context.applicationContext,
+                        skinId = skinId,
+                        purchaseToken = productId?.let { tokens[it] },
+                        passToken = tokens[BillingManager.LIFETIME_PASS_PRODUCT_ID],
+                        onProgress = { percent -> downloadProgress = percent },
+                        onComplete = { success ->
+                            downloadProgress = null
+                            downloadFailed = !success
+                            if (success) { downloaded = true; skin = SkinRepository.findSkin(context, skinId) }
+                            Toast.makeText(
+                                context,
+                                if (success) "$name ${context.getString(R.string.skin_download_complete)}"
+                                else context.getString(R.string.skin_download_fail),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
+                    )
+                }
+            }
         }
+
+        // 미보유 유료 → 구매. 상품정보(SKU)가 아직 없으면 '준비 중' 안내로 폴백.
+        fun startPurchase() {
+            val act = activity
+            val pid = productId
+            if (act == null || pid == null) {
+                Toast.makeText(context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
+                return
+            }
+            scope.launch {
+                val details = withContext(Dispatchers.IO) {
+                    BillingManager.productDetails(context, listOf(pid))
+                }.firstOrNull()
+                if (details == null) {
+                    Toast.makeText(context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
+                } else {
+                    // 구매 결과는 비동기 도착 → ON_RESUME에서 entitled/downloaded가 갱신된다.
+                    BillingManager.launchPurchase(act, details)
+                }
+            }
+        }
+
+        // 평생이용권 구매(프리스티지 제외 유료 테마 일괄 해금). 결과는 ON_RESUME에서 반영.
+        fun startPassPurchase() {
+            val act = activity
+            if (act == null) {
+                Toast.makeText(context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
+                return
+            }
+            scope.launch {
+                val details = withContext(Dispatchers.IO) { BillingManager.lifetimePassDetails(context) }
+                if (details == null) {
+                    Toast.makeText(context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT).show()
+                } else {
+                    BillingManager.launchPurchase(act, details)
+                }
+            }
+        }
+
         Button(
             onClick = {
                 when {
-                    owned -> if (!applied) {
+                    downloading -> {}
+                    downloaded -> if (!applied) {
                         TimerController.selectCharacterSkin(context, skinId)
                         TimerController.selectTimerSkin(context, skinId)
                         applied = true
@@ -299,30 +441,12 @@ fun DetailScreen(
                             Toast.LENGTH_SHORT
                         ).show()
                     }
-                    downloading -> {}
-                    isFree || price <= 0 -> startDownload(
-                        context, skinId, name, isFree, price, prestige, previewBase, zipUrl,
-                        onStart = {
-                            downloadProgress = -1
-                            downloadFailed = false
-                        },
-                        onProgress = { percent -> downloadProgress = percent },
-                        onDone = { success ->
-                            downloadProgress = null
-                            downloadFailed = !success
-                            if (success) {
-                                owned = true
-                                skin = SkinRepository.findSkin(context, skinId)
-                            }
-                        },
-                    )
-                    else -> Toast.makeText(
-                        context, context.getString(R.string.store_buy_stub), Toast.LENGTH_SHORT
-                    ).show()
+                    entitled -> startEntitledDownload()
+                    else -> startPurchase()
                 }
             },
-            // 보유 중이면 기간과 무관하게 적용 가능. 미보유 + 기간만료면 구매 불가.
-            enabled = !(downloading || (owned && applied) || (saleExpired && !owned)),
+            // 다운로드+적용중이면 비활성. 미보유 + 기간만료면 구매 불가.
+            enabled = !(downloading || (downloaded && applied) || (saleExpired && !entitled)),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = AppColors.Primary,
@@ -331,14 +455,38 @@ fun DetailScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp).height(52.dp),
         ) {
             val label = when {
-                owned -> stringResource(if (applied) R.string.detail_applied else R.string.detail_apply)
-                saleExpired -> stringResource(R.string.sale_expired)
                 downloading -> stringResource(R.string.skin_btn_downloading)
+                downloaded -> stringResource(if (applied) R.string.detail_applied else R.string.detail_apply)
                 downloadFailed -> stringResource(R.string.skin_btn_retry)
-                else -> buyLabel
+                entitled -> stringResource(R.string.skin_btn_download)
+                saleExpired -> stringResource(R.string.sale_expired)
+                else -> priceLabel
             }
             DownloadButtonContent(label = label, progress = downloadProgress)
         }
+
+        // '구매하기' 하단의 평생이용권 구매 버튼.
+        // 프리스티지는 이용권으로 해금 안 되므로 노출 제외. 무료/이미 보유/이미 이용권 보유 시에도 숨김.
+        if (!prestige && !isFree && !entitled && !hasPass) {
+            val passLabel = stringResource(R.string.lifetime_pass_buy) +
+                (passPriceText?.let { " ($it)" } ?: "")
+            Button(
+                onClick = { startPassPurchase() },
+                enabled = !downloading,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.Surface,
+                    contentColor = AppColors.Primary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 8.dp)
+                    .height(48.dp),
+            ) {
+                Text(passLabel, fontSize = 15.sp)
+            }
+        }
+
         Spacer(Modifier.height(48.dp))
     }
 }
@@ -560,6 +708,16 @@ private fun startDownload(
             onDone(success)
         },
     )
+}
+
+/** Compose의 ContextWrapper 체인에서 호스트 Activity를 찾는다(launchBillingFlow에 필요). 없으면 null. */
+internal fun Context.findActivity(): Activity? {
+    var ctx: Context? = this
+    while (ctx is android.content.ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 /** 다운로드 중에는 버튼 안에서 실제 수신률(또는 전체 크기 미상 상태)을 보여준다. */

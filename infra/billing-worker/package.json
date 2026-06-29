@@ -1,0 +1,14 @@
+{
+  "name": "daintyz-billing-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Play purchaseToken 검증 후 비공개 R2에서 유료 스킨 zip을 내려주는 Cloudflare Worker",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  }
+}

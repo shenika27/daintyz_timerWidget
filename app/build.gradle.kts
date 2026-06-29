@@ -1,6 +1,16 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+// 업로드 키스토어 설정. keystore.properties(=비밀, 커밋 금지)가 있을 때만 릴리스 서명을 켠다.
+// 파일이 없으면(현재/CI/디버그) 서명 없이도 구성이 깨지지 않게 가드한다.
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) FileInputStream(keystorePropsFile).use { load(it) }
 }
 
 android {
@@ -16,6 +26,18 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        // keystore.properties 가 있을 때만 업로드 서명 구성을 만든다(없으면 릴리스는 미서명).
+        if (keystorePropsFile.exists()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -23,6 +45,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // 키스토어가 준비됐으면 릴리스 AAB를 업로드 키로 서명한다(Play App Signing 업로드용).
+            if (keystorePropsFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -77,6 +103,9 @@ dependencies {
     // ---- 이미지 로딩(Coil): 원격 썸네일/미리보기 + GIF·애니 WebP 디코딩 ----
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
+
+    // ---- 결제(Google Play Billing): 개별구매 + 평생이용권. ktx = suspend 확장 포함 ----
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.test:core:1.6.1")
