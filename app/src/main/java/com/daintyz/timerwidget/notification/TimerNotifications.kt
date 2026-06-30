@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import com.daintyz.timerwidget.R
+import com.daintyz.timerwidget.receiver.TimerActionReceiver
 import com.daintyz.timerwidget.ui.MainActivity
 
 /**
@@ -81,7 +82,13 @@ object TimerNotifications {
             .setContentTitle(context.getString(R.string.notif_complete_title))
             .setContentText(context.getString(R.string.notif_complete_text))
             .setAutoCancel(true)
-            .setContentIntent(openAppIntent(context))
+            .setContentIntent(completeOpenIntent(context))
+            .setDeleteIntent(completeDismissIntent(context))
+            .addAction(
+                android.R.drawable.checkbox_on_background,
+                context.getString(R.string.notif_complete_action_done),
+                completeDoneIntent(context)
+            )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
         runCatching { manager.notify(NOTIF_ID_COMPLETE, notification) }
@@ -96,6 +103,34 @@ object TimerNotifications {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         return PendingIntent.getActivity(
             context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun completeOpenIntent(context: Context): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(MainActivity.EXTRA_CONFIRM_COMPLETE, true)
+        return PendingIntent.getActivity(
+            context,
+            MainActivity.EXTRA_CONFIRM_COMPLETE.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun completeDoneIntent(context: Context): PendingIntent =
+        completeBroadcastIntent(context, TimerActionReceiver.ACTION_TAP_COMPLETE)
+
+    private fun completeDismissIntent(context: Context): PendingIntent =
+        completeBroadcastIntent(context, TimerActionReceiver.ACTION_DISMISS_COMPLETE)
+
+    private fun completeBroadcastIntent(context: Context, action: String): PendingIntent {
+        val intent = Intent(context, TimerActionReceiver::class.java).setAction(action)
+        return PendingIntent.getBroadcast(
+            context,
+            action.hashCode(),
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }

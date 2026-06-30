@@ -29,6 +29,7 @@
     <string name="notif_progress_title">타이머 진행 중</string>
     <string name="notif_complete_title">타이머 완료!</string>
     <string name="notif_complete_text">설정한 시간이 끝났어요.</string>
+    <string name="notif_complete_action_done">완료</string>
 
     <!-- 메인 화면 -->
     <string name="main_title">마이 미니 타이머</string>

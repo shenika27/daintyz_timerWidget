@@ -24,7 +24,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.SwitchDefaults
@@ -71,6 +75,7 @@ import com.daintyz.timerwidget.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /**
  * 설정 탭 — 섹션(타이머/알림/표시/기타)으로 묶은 행 리스트.
@@ -90,6 +95,8 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
     var stepSec by remember { mutableStateOf(TextFieldValue("")) }
     var layoutMode by remember { mutableStateOf(LayoutMode.TOP) }
     var completeSound by remember { mutableStateOf(prefs.isCompleteSoundEnabled()) }
+    var completeRepeat by remember { mutableStateOf(prefs.isCompleteRepeatEnabled()) }
+    var completeRepeatSeconds by remember { mutableStateOf(prefs.completeRepeatSeconds()) }
     var vibrate by remember { mutableStateOf(prefs.isVibrateEnabled()) }
     var useSystemFont by remember { mutableStateOf(prefs.isUseSystemFont()) }
     var giftCode by remember { mutableStateOf(TextFieldValue("")) }
@@ -112,6 +119,8 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             stepSec = TextFieldValue((data.stepSeconds % 60).toString())
         }
         layoutMode = data.layoutMode
+        completeRepeat = prefs.isCompleteRepeatEnabled()
+        completeRepeatSeconds = prefs.completeRepeatSeconds()
         hasPass = data.hasEffectiveLifetimePass
     }
 
@@ -188,6 +197,67 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                 vibrate = it
                 prefs.setVibrateEnabled(it)
             }
+        }
+        SettingRow(
+            title = "완료 알림 반복",
+            subtitle = if (completeRepeat) {
+                "소리와 진동을 ${completeRepeatSeconds}초 동안 반복"
+            } else {
+                "소리와 진동을 한 번만 재생"
+            },
+        ) {
+            Checkbox(
+                checked = completeRepeat,
+                onCheckedChange = {
+                    completeRepeat = it
+                    prefs.setCompleteRepeatEnabled(it)
+                },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = AppColors.Primary,
+                    uncheckedColor = AppColors.Brown,
+                    checkmarkColor = AppColors.OnPrimary,
+                ),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(if (completeRepeat) 1f else 0.45f)
+                .padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
+        ) {
+            Slider(
+                value = completeRepeatSeconds.toFloat(),
+                onValueChange = { raw ->
+                    val snapped = (raw / 5f).roundToInt() * 5
+                    completeRepeatSeconds = snapped.coerceIn(
+                        TimerPreferences.MIN_COMPLETE_REPEAT_SECONDS,
+                        TimerPreferences.MAX_COMPLETE_REPEAT_SECONDS
+                    )
+                },
+                onValueChangeFinished = {
+                    prefs.setCompleteRepeatSeconds(completeRepeatSeconds)
+                },
+                enabled = completeRepeat,
+                valueRange = TimerPreferences.MIN_COMPLETE_REPEAT_SECONDS.toFloat()..
+                    TimerPreferences.MAX_COMPLETE_REPEAT_SECONDS.toFloat(),
+                steps = ((TimerPreferences.MAX_COMPLETE_REPEAT_SECONDS -
+                    TimerPreferences.MIN_COMPLETE_REPEAT_SECONDS) / 5) - 1,
+                colors = SliderDefaults.colors(
+                    thumbColor = AppColors.Primary,
+                    activeTrackColor = AppColors.Primary,
+                    inactiveTrackColor = AppColors.Stroke,
+                    disabledThumbColor = AppColors.Brown,
+                    disabledActiveTrackColor = AppColors.Stroke,
+                    disabledInactiveTrackColor = AppColors.Stroke,
+                ),
+            )
+            Text(
+                "${completeRepeatSeconds}초",
+                color = if (completeRepeat) AppColors.Brown else AppColors.Dim,
+                fontSize = 11.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End,
+            )
         }
         SettingRow(
             title = "시스템 알림 설정",

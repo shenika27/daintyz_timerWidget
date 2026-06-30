@@ -119,6 +119,7 @@ object TimerController {
 
     /** 진행/일시정지 → 정지(Idle). 직전 설정 시간(lastSetSeconds)은 유지 (설계 문서 3-2). */
     fun stopReset(context: Context) {
+        CompletionFeedback.stop()
         val data = TimerPreferences.get(context).load()
         TimerPreferences.get(context).save(
             data.copy(
@@ -156,6 +157,7 @@ object TimerController {
 
     /** 완료 상태에서 위젯 탭 → 정지(Idle) 복귀, 직전 설정 시간 유지 (설계 문서 3-3). */
     fun resetFromComplete(context: Context) {
+        CompletionFeedback.stop()
         val data = TimerPreferences.get(context).load()
         if (data.state != TimerState.COMPLETE) return
         TimerPreferences.get(context).save(
@@ -165,6 +167,11 @@ object TimerController {
         // 완료 → 정지 복귀 시에도 stop 애니메이션을 한 번 재생(서비스가 끝나면 스스로 종료).
         TimerForegroundService.resync(context)
         WidgetUpdater.updateAllWidgets(context)
+    }
+
+    /** 완료 알림을 스와이프해 지웠을 때 소리·진동 반복만 멈추고 COMPLETE 상태는 유지한다. */
+    fun dismissCompleteNotification(context: Context) {
+        CompletionFeedback.stop()
     }
 
     // ---- 앱 화면 설정 변경 ----

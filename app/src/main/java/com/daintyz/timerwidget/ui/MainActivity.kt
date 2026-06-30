@@ -35,6 +35,7 @@ import androidx.lifecycle.lifecycleScope
 import com.daintyz.timerwidget.R
 import com.daintyz.timerwidget.billing.BillingManager
 import com.daintyz.timerwidget.billing.EntitlementSync
+import com.daintyz.timerwidget.controller.TimerController
 import com.daintyz.timerwidget.skin.SkinRepoUrls
 import kotlinx.coroutines.launch
 import com.daintyz.timerwidget.ui.compose.AdaptiveContent
@@ -54,6 +55,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_NAV = "nav_tab"
+        const val EXTRA_CONFIRM_COMPLETE = "confirm_complete"
         const val NAV_VAULT = "vault"
         const val NAV_STORE = "store"
         const val NAV_SETTINGS = "settings"
@@ -74,6 +76,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleCompleteConfirmation(intent)
         requestedTab.intValue = tabFromIntent(intent)
 
         setContent {
@@ -106,7 +109,14 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleCompleteConfirmation(intent)
         requestedTab.intValue = tabFromIntent(intent)
+    }
+
+    private fun handleCompleteConfirmation(intent: Intent) {
+        if (!intent.getBooleanExtra(EXTRA_CONFIRM_COMPLETE, false)) return
+        TimerController.resetFromComplete(applicationContext)
+        intent.removeExtra(EXTRA_CONFIRM_COMPLETE)
     }
 
     private fun tabFromIntent(intent: Intent): Int = when (intent.getStringExtra(EXTRA_NAV)) {

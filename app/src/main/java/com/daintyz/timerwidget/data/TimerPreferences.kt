@@ -85,6 +85,23 @@ class TimerPreferences private constructor(context: Context) {
     fun isCompleteSoundEnabled(): Boolean = prefs.getBoolean(KEY_COMPLETE_SOUND, true)
     fun setCompleteSoundEnabled(on: Boolean) = prefs.edit().putBoolean(KEY_COMPLETE_SOUND, on).apply()
 
+    /** 완료 알림음/진동을 설정 시간 동안 반복할지. 기본 켜짐. */
+    fun isCompleteRepeatEnabled(): Boolean = prefs.getBoolean(KEY_COMPLETE_REPEAT, true)
+    fun setCompleteRepeatEnabled(on: Boolean) = prefs.edit().putBoolean(KEY_COMPLETE_REPEAT, on).apply()
+
+    /** 완료 알림음/진동 반복 시간(초). */
+    fun completeRepeatSeconds(): Int =
+        prefs.getInt(KEY_COMPLETE_REPEAT_SECONDS, DEFAULT_COMPLETE_REPEAT_SECONDS)
+            .coerceIn(MIN_COMPLETE_REPEAT_SECONDS, MAX_COMPLETE_REPEAT_SECONDS)
+
+    fun setCompleteRepeatSeconds(seconds: Int) =
+        prefs.edit()
+            .putInt(
+                KEY_COMPLETE_REPEAT_SECONDS,
+                seconds.coerceIn(MIN_COMPLETE_REPEAT_SECONDS, MAX_COMPLETE_REPEAT_SECONDS)
+            )
+            .apply()
+
     /** 완료 시 앱이 진동할지. 기본 켜짐. */
     fun isVibrateEnabled(): Boolean = prefs.getBoolean(KEY_VIBRATE, true)
     fun setVibrateEnabled(on: Boolean) = prefs.edit().putBoolean(KEY_VIBRATE, on).apply()
@@ -131,6 +148,9 @@ class TimerPreferences private constructor(context: Context) {
         const val DEFAULT_STEP_MINUTES = 1
         const val DEFAULT_STEP_SECONDS = DEFAULT_STEP_MINUTES * SECONDS_PER_MINUTE
         const val DEFAULT_SKIN_ID = "cha01"
+        const val DEFAULT_COMPLETE_REPEAT_SECONDS = 25
+        const val MIN_COMPLETE_REPEAT_SECONDS = 5
+        const val MAX_COMPLETE_REPEAT_SECONDS = 60
 
         private const val KEY_STATE = "state"
         private const val KEY_TARGET_END_ELAPSED = "target_end_elapsed"
@@ -154,6 +174,8 @@ class TimerPreferences private constructor(context: Context) {
         private const val KEY_GIFT_UNLOCKED_SKIN_IDS = "gift_unlocked_skin_ids"
         private const val KEY_FAVORITE_SKIN_IDS = "favorite_skin_ids"
         private const val KEY_COMPLETE_SOUND = "complete_sound_enabled"
+        private const val KEY_COMPLETE_REPEAT = "complete_repeat_enabled"
+        private const val KEY_COMPLETE_REPEAT_SECONDS = "complete_repeat_seconds"
         private const val KEY_VIBRATE = "vibrate_enabled"
         private const val KEY_USE_SYSTEM_FONT = "use_system_font"
 
