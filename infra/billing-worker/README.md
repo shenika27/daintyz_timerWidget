@@ -11,9 +11,10 @@
                                    비공개 R2(zip) ──스트리밍──▶ 앱
 ```
 
-권한 규칙(BM: 개별구매 + 평생이용권)
+권한 규칙(BM: 개별구매 + 평생이용권 + 평생이용권 기프트)
 - 그 스킨의 `productId` 토큰이 **구매완료** → 통과
 - 또는 (프리스티지가 아니면) **평생이용권**(`lifetime_pass`) 토큰이 구매완료 → 통과
+- 또는 (프리스티지가 아니면) Worker가 발급한 **평생이용권 기프트 토큰**(`giftPassToken`) 서명이 유효 → 통과
 - 무료 스킨은 검증 없이 통과
 
 ---
@@ -88,14 +89,19 @@ npx wrangler r2 object put daintyz-skins/cloud.zip --file=./cloud.zip
    npx wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON < ./service-account.json
    ```
    (또는 인터랙티브로 붙여넣기. JSON 안의 `\n`은 그대로 둔다 — 코드가 파싱한다.)
-3. 배포:
+3. 평생이용권 기프트 토큰 서명용 secret을 등록:
+   ```bash
+   npx wrangler secret put GIFT_PASS_SIGNING_SECRET
+   ```
+   충분히 긴 랜덤 문자열을 넣는다. 이 값이 바뀌면 기존 앱에 저장된 `giftPassToken`은 더 이상 보호 zip 다운로드에 쓸 수 없다.
+4. 배포:
    ```bash
    npx wrangler deploy
    ```
    배포되면 `https://daintyz-billing.<계정>.workers.dev` 주소가 나온다. 이 주소를 앱에 넣는다(아래 계약 참고).
 
 ### 로컬 개발 시
-`.dev.vars` 파일에 `GOOGLE_SERVICE_ACCOUNT_JSON='{...}'` 를 넣고 `npx wrangler dev` (이 파일은 .gitignore 처리됨).
+`.dev.vars` 파일에 `GOOGLE_SERVICE_ACCOUNT_JSON='{...}'`, `GIFT_PASS_SIGNING_SECRET='...'` 를 넣고 `npx wrangler dev` (이 파일은 .gitignore 처리됨).
 
 ## 5. 테스트 (Play Console 라이선스 테스터)
 
@@ -109,24 +115,50 @@ npx wrangler r2 object put daintyz-skins/cloud.zip --file=./cloud.zip
 
 ## API 계약 (앱 Phase 4 배선용)
 
+### `POST /v1/redeem`
+평생이용권 기프트코드를 서버에서 검증하고, 보호 zip 다운로드에 쓸 서명 토큰을 발급한다.
+
+요청(JSON):
+```json
+{
+  "code": "PASS-ABCD-1234"
+}
+```
+
+검증:
+- 코드는 앱/빌더와 동일하게 공백 제거 + 대문자 변환 후 SHA-256 해시로 바꾼다.
+- `catalog.json` 최상위 `lifetimePassGiftCodes[].hash`와 대조한다.
+- `expiresAt`은 Worker 서버 날짜(UTC yyyy-MM-dd) 기준으로 해당 날짜까지 허용한다.
+
+응답:
+- **200** `{ "type": "lifetime_pass", "giftPassToken": "..." }`
+- **400** `{ "error": "bad_json" | "missing_code" | "invalid_code" }`
+- **404** `{ "error": "invalid_code" }`
+- **410** `{ "error": "expired_code" }`
+- **500** `{ "error": "server_error" }`
+
+`giftPassToken`은 앱에 저장했다가 보호 zip 다운로드 때 함께 보낸다. 계정 시스템이 없으므로 토큰 추출·공유까지 완전히 막지는 못하지만, 공개 catalog 해시만으로 보호 zip을 받을 수 없게 막는다.
+
 ### `POST /v1/skins/download`
 요청(JSON):
 ```json
 {
   "skinId": "cloud",
   "purchaseToken": "그 스킨 productId의 Play 영수증 토큰(있으면)",
-  "passToken": "평생이용권 영수증 토큰(있으면)"
+  "passToken": "평생이용권 영수증 토큰(있으면)",
+  "giftPassToken": "POST /v1/redeem으로 받은 평생이용권 기프트 토큰(있으면)"
 }
 ```
 - 앱은 `BillingManager.queryPurchases` 결과에서 토큰을 꺼내 보낸다.
-- non-prestige 스킨은 `purchaseToken`(낱개구매) 또는 `passToken`(이용권) 둘 중 하나만 있어도 된다.
+- non-prestige 스킨은 `purchaseToken`(낱개구매), `passToken`(Play 이용권), `giftPassToken`(기프트 이용권) 중 하나만 있어도 된다.
+- prestige 스킨은 `giftPassToken`/`passToken`으로는 통과하지 않는다. 개별 구매 토큰만 허용된다.
 
 응답:
 - **200** `application/zip` — zip 바이트 스트림(앱은 기존 `SkinDownloader`의 unzip 경로로 처리. 단, GET→POST로 바꾸고 토큰을 바디에 넣어야 함)
 - **403** `{ "error": "not_entitled" }` — 구매 확인 실패
 - **404** `{ "error": "unknown_skin" | "zip_not_found" }`
 - **400** `{ "error": "bad_json" | "missing_skinId" }`
-- **500** `{ "error": "server_auth_failed" | "server_error" }`
+- **500** `{ "error": "server_auth_failed" | "gift_pass_auth_failed" | "server_error" }`
 
 > ⚠️ 토큰은 URL이 아니라 **바디(POST)** 로 보낸다(로그 유출 방지). 현재 `SkinDownloader.download`는 GET이라,
 > Phase 4에서 유료 zip은 이 엔드포인트로 POST하도록 분기해야 한다(무료는 기존 공개 CDN GET 유지).
@@ -134,6 +166,6 @@ npx wrangler r2 object put daintyz-skins/cloud.zip --file=./cloud.zip
 ---
 
 ## 아직 안 한 것(TODO)
-- **기프트코드 서버 검증/수량제한 엔드포인트**(`POST /v1/redeem`): 지금은 앱이 클라이언트에서 해시 대조 + 공개 zip 다운로드. 보호 zip으로 옮기려면 이 Worker에 redeem을 추가해 코드 검증 후 동일하게 R2에서 서빙해야 한다. (해시/수량은 KV 또는 R2 메타로)
+- **기프트코드 수량제한/1회용 처리**: 현재 `/v1/redeem`은 catalog 해시+만료 검증과 서명 토큰 발급만 한다. 1회용/수량제한/회수가 필요하면 KV 또는 D1에 코드 상태를 저장해야 한다.
 - **SKU 자동등록**(`inappproducts.insert`): 신규 유료 스킨 출시 시 Play 상품을 자동 생성하는 CI 단계(같은 서비스계정 사용).
 - **R2 업로드 자동화**: 번들 자동화에 유료 zip의 R2 업로드를 연결.

@@ -64,7 +64,7 @@ object EntitlementCleanup {
                 isFree = isFree,
                 prestige = prestige,
                 purchasedSkinIds = data.purchasedSkinIds,
-                hasLifetimePass = data.hasLifetimePass,
+                hasLifetimePass = data.hasEffectiveLifetimePass,
                 giftUnlockedSkinIds = data.giftUnlockedSkinIds,
             )
         }
@@ -106,7 +106,7 @@ object EntitlementCleanup {
             isFree = entry?.isFree ?: skin.isFree,
             prestige = entry?.prestige ?: skin.prestige,
             purchasedSkinIds = data.purchasedSkinIds,
-            hasLifetimePass = data.hasLifetimePass,
+            hasLifetimePass = data.hasEffectiveLifetimePass,
             giftUnlockedSkinIds = data.giftUnlockedSkinIds,
         )
     }

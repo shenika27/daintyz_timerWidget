@@ -105,7 +105,7 @@ fun VaultScreen(
     // 별 토글은 카드만 즉시 바꾸고, 캐러셀 정렬은 의도적인 화면 재진입/필터 전환 때만 갱신한다.
     var orderingFavoriteIds by remember { mutableStateOf(favoriteIds) }
     var purchased by remember { mutableStateOf(initialData.purchasedSkinIds) }
-    var hasPass by remember { mutableStateOf(initialData.hasLifetimePass) }
+    var hasPass by remember { mutableStateOf(initialData.hasEffectiveLifetimePass) }
     var giftUnlocked by remember { mutableStateOf(initialData.giftUnlockedSkinIds) }
     var appliedId by remember {
         mutableStateOf(
@@ -125,7 +125,7 @@ fun VaultScreen(
         orderingFavoriteIds = favoriteIds
         val data = prefs.load()
         purchased = data.purchasedSkinIds
-        hasPass = data.hasLifetimePass
+        hasPass = data.hasEffectiveLifetimePass
         giftUnlocked = data.giftUnlockedSkinIds
         localSkins = SkinRepository.loadAllSkins(context)
         appliedId = if (data.selectedCharacterSkinId == data.selectedTimerSkinId)

@@ -96,7 +96,7 @@ object WidgetUpdater {
         fun Skin.available() = SkinAvailabilityChecker.isSkinAvailable(
             this,
             purchasedSkinIds = data.purchasedSkinIds,
-            hasLifetimePass = data.hasLifetimePass,
+            hasLifetimePass = data.hasEffectiveLifetimePass,
             giftUnlockedSkinIds = data.giftUnlockedSkinIds
         )
 

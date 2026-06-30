@@ -43,7 +43,8 @@ enum class LayoutMode(val key: String) {
  * @param selectedCharacterSkinId 캐릭터 영역에 적용된 스킨(테마) id.
  * @param selectedTimerSkinId 타이머 영역에 적용된 스킨(테마) id. 캐릭터와 독립적으로 선택된다.
  * @param purchasedSkinIds Google Play 결제로 구매한 스킨(테마) id 집합. 구매는 테마 단위이므로 해금되면 캐릭터/타이머 둘 다 사용 가능. Play queryPurchases가 단일 출처 → 환불 시 회수된다.
- * @param hasLifetimePass '업데이트 평생이용권' 보유 여부. true면 프리스티지가 아닌 모든 유료 테마가 해금된다(프리스티지는 항상 개별구매).
+ * @param hasLifetimePass Play 결제로 보유한 '업데이트 평생이용권'. true면 프리스티지가 아닌 모든 유료 테마가 해금된다(프리스티지는 항상 개별구매).
+ * @param hasGiftLifetimePass 기프트코드로 지급받은 평생이용권. Play 환불/queryPurchases 동기화 대상이 아니므로 별도 보관한다.
  * @param giftUnlockedSkinIds 기프트코드로 해금한 스킨(테마) id 집합. Play 결제와 출처가 다르므로(환불/queryPurchases 동기화 대상 아님) [purchasedSkinIds]와 분리 보관한다. 프리스티지도 코드로 해금 가능.
  */
 data class TimerData(
@@ -59,8 +60,12 @@ data class TimerData(
     val selectedTimerSkinId: String,
     val purchasedSkinIds: Set<String>,
     val hasLifetimePass: Boolean = false,
+    val hasGiftLifetimePass: Boolean = false,
     val giftUnlockedSkinIds: Set<String> = emptySet()
 ) {
+    val hasEffectiveLifetimePass: Boolean
+        get() = hasLifetimePass || hasGiftLifetimePass
+
     /**
      * 지정한 기준 시각에서의 남은 시간(ms). 상태에 무관하게 일관된 값을 돌려준다.
      */

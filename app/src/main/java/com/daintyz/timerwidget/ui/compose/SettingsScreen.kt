@@ -82,8 +82,9 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val prefs = remember { TimerPreferences.get(context) }
 
-    // 기프트코드 해금 성공 시 띄울 다이얼로그 대상 (skinId to name). null이면 닫힘.
+    // 기프트코드 테마 해금 성공 시 띄울 다이얼로그 대상 (skinId to name). null이면 닫힘.
     var unlockedSkin by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var lifetimePassUnlocked by remember { mutableStateOf(false) }
 
     var stepMin by remember { mutableStateOf(TextFieldValue("")) }
     var stepSec by remember { mutableStateOf(TextFieldValue("")) }
@@ -94,7 +95,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
     var giftCode by remember { mutableStateOf(TextFieldValue("")) }
     var redeeming by remember { mutableStateOf(false) }
     var restoring by remember { mutableStateOf(false) }
-    var hasPass by remember { mutableStateOf(prefs.load().hasLifetimePass) }
+    var hasPass by remember { mutableStateOf(prefs.load().hasEffectiveLifetimePass) }
     var passPriceText by remember { mutableStateOf<String?>(null) }
     var buyingPass by remember { mutableStateOf(false) }
 
@@ -111,7 +112,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             stepSec = TextFieldValue((data.stepSeconds % 60).toString())
         }
         layoutMode = data.layoutMode
-        hasPass = data.hasLifetimePass
+        hasPass = data.hasEffectiveLifetimePass
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -285,8 +286,14 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                                 giftCode = TextFieldValue("")
                                 unlockedSkin = result.skinId to result.name // 다이얼로그로 후속 안내
                             }
+                            GiftCodeRedeemer.Result.LifetimePassSuccess -> {
+                                giftCode = TextFieldValue("")
+                                hasPass = true
+                                lifetimePassUnlocked = true
+                            }
                             is GiftCodeRedeemer.Result.AlreadyOwned ->
-                                toast(context, "이미 보유한 테마예요 (${result.name})")
+                                toast(context, "이미 보유 중이에요 (${result.name})")
+                            GiftCodeRedeemer.Result.Expired -> toast(context, "유효기간이 지난 코드예요")
                             GiftCodeRedeemer.Result.Invalid -> toast(context, "앗, 코드를 다시 확인해 주세요")
                             GiftCodeRedeemer.Result.Error -> toast(context, "연결이 불안정해요. 잠시 후 다시 시도해 주세요")
                         }
@@ -296,6 +303,24 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
         }
         SettingRow("앱 버전") {
             Text(if (versionName.isNotBlank()) "v$versionName" else "—", color = AppColors.Brown, fontSize = 13.sp)
+        }
+    }
+
+    lifetimePassUnlocked.let { show ->
+        if (show) {
+            AlertDialog(
+                onDismissRequest = { lifetimePassUnlocked = false },
+                icon = { Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AppColors.Primary) },
+                title = { Text("평생이용권 해금 완료!", color = AppColors.TextPrimary) },
+                text = { Text("프리스티지 제외 유료 테마가 열렸어요.", color = AppColors.Brown) },
+                shape = RoundedCornerShape(20.dp),
+                containerColor = AppColors.Background,
+                confirmButton = {
+                    TextButton(onClick = { lifetimePassUnlocked = false }) {
+                        Text("확인", color = AppColors.Primary, fontWeight = FontWeight.Bold)
+                    }
+                },
+            )
         }
     }
 

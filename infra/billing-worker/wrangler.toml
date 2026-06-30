@@ -19,3 +19,4 @@ bucket_name = "daintyz-skins"
 
 # ── 비밀(여기 두지 않음) ──
 # GOOGLE_SERVICE_ACCOUNT_JSON 은 wrangler secret put 으로 등록한다(README 참고).
+# GIFT_PASS_SIGNING_SECRET 은 평생이용권 기프트 토큰 HMAC 서명용 secret으로 등록한다.

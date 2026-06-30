@@ -42,6 +42,7 @@ class TimerPreferences private constructor(context: Context) {
             ?: prefs.getString(KEY_SELECTED_SKIN_ID, null) ?: DEFAULT_SKIN_ID,
         purchasedSkinIds = prefs.getStringSet(KEY_PURCHASED_SKIN_IDS, emptySet())?.toSet() ?: emptySet(),
         hasLifetimePass = prefs.getBoolean(KEY_LIFETIME_PASS, false),
+        hasGiftLifetimePass = prefs.getBoolean(KEY_GIFT_LIFETIME_PASS, false),
         giftUnlockedSkinIds = prefs.getStringSet(KEY_GIFT_UNLOCKED_SKIN_IDS, emptySet())?.toSet() ?: emptySet()
     )
 
@@ -61,6 +62,7 @@ class TimerPreferences private constructor(context: Context) {
             putString(KEY_SELECTED_TIMER_SKIN_ID, data.selectedTimerSkinId)
             putStringSet(KEY_PURCHASED_SKIN_IDS, data.purchasedSkinIds)
             putBoolean(KEY_LIFETIME_PASS, data.hasLifetimePass)
+            putBoolean(KEY_GIFT_LIFETIME_PASS, data.hasGiftLifetimePass)
             putStringSet(KEY_GIFT_UNLOCKED_SKIN_IDS, data.giftUnlockedSkinIds)
         }.apply()
     }
@@ -101,6 +103,11 @@ class TimerPreferences private constructor(context: Context) {
         update { it.copy(giftUnlockedSkinIds = it.giftUnlockedSkinIds + skinId) }
     }
 
+    /** 기프트코드로 평생이용권을 지급한다. Play 결제 평생이용권과 분리 보관해 구매 동기화 회수 대상에서 제외한다. */
+    fun grantGiftLifetimePass() {
+        update { it.copy(hasGiftLifetimePass = true) }
+    }
+
     /** [load] → 변형 → [save]를 한 번에. 변형 결과를 그대로 반환한다. */
     inline fun update(transform: (TimerData) -> TimerData): TimerData {
         val updated = transform(load())
@@ -136,6 +143,7 @@ class TimerPreferences private constructor(context: Context) {
         private const val KEY_SELECTED_TIMER_SKIN_ID = "selected_timer_skin_id"
         private const val KEY_PURCHASED_SKIN_IDS = "purchased_skin_ids"
         private const val KEY_LIFETIME_PASS = "has_lifetime_pass"
+        private const val KEY_GIFT_LIFETIME_PASS = "has_gift_lifetime_pass"
         private const val KEY_GIFT_UNLOCKED_SKIN_IDS = "gift_unlocked_skin_ids"
         private const val KEY_FAVORITE_SKIN_IDS = "favorite_skin_ids"
         private const val KEY_COMPLETE_SOUND = "complete_sound_enabled"

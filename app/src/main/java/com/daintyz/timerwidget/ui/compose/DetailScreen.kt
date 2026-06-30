@@ -151,7 +151,7 @@ fun DetailScreen(
             isFree = isFree,
             prestige = prestige,
             purchasedSkinIds = d.purchasedSkinIds,
-            hasLifetimePass = d.hasLifetimePass,
+            hasLifetimePass = d.hasEffectiveLifetimePass,
             giftUnlockedSkinIds = d.giftUnlockedSkinIds,
         )
     }
@@ -174,7 +174,7 @@ fun DetailScreen(
     // 유료 상품의 현지화 가격(formattedPrice). SKU 미등록이면 null → catalog 가격으로 폴백.
     var priceText by remember { mutableStateOf<String?>(null) }
     // 평생이용권 보유 여부 + 가격(하단 '평생이용권 구매' 버튼 노출/표시용).
-    var hasPass by remember { mutableStateOf(TimerPreferences.get(context).load().hasLifetimePass) }
+    var hasPass by remember { mutableStateOf(TimerPreferences.get(context).load().hasEffectiveLifetimePass) }
     var passPriceText by remember { mutableStateOf<String?>(null) }
     val downloading = downloadProgress != null
 
@@ -188,7 +188,7 @@ fun DetailScreen(
                 skin = SkinRepository.findSkin(context, skinId)
                 val d = TimerPreferences.get(context).load()
                 applied = computeApplied(nextEntitled)
-                hasPass = d.hasLifetimePass
+                hasPass = d.hasEffectiveLifetimePass
             }
         }
         lifecycleOwner.lifecycle.addObserver(obs)

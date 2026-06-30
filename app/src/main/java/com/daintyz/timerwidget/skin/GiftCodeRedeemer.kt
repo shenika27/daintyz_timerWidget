@@ -2,7 +2,10 @@ package com.daintyz.timerwidget.skin
 
 import android.content.Context
 import com.daintyz.timerwidget.data.TimerPreferences
+import com.daintyz.timerwidget.model.LifetimePassGiftCode
 import java.security.MessageDigest
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.concurrent.CountDownLatch
 
 /**
@@ -19,9 +22,13 @@ object GiftCodeRedeemer {
     sealed interface Result {
         /** 해금 성공(다운로드까지 완료). */
         data class Success(val skinId: String, val name: String) : Result
+        /** 평생이용권 해금 성공. */
+        object LifetimePassSuccess : Result
+        /** 일치하는 코드가 있으나 입력 가능 기한이 지남. */
+        object Expired : Result
         /** 일치하는 코드 없음(오타/만료/잘못된 코드). */
         object Invalid : Result
-        /** 이미 보유한 스킨의 코드. */
+        /** 이미 보유한 스킨/이용권의 코드. */
         data class AlreadyOwned(val name: String) : Result
         /** 네트워크/다운로드 실패. */
         object Error : Result
@@ -40,13 +47,23 @@ object GiftCodeRedeemer {
         if (code.isEmpty()) return Result.Invalid
 
         val hash = sha256Hex(code)
-        val catalog = runCatching { SkinDownloader.fetchCatalog(SkinRepoUrls.CATALOG_URL) }.getOrNull()
+        val catalog = runCatching { SkinDownloader.fetchCatalogWithMeta(SkinRepoUrls.CATALOG_URL) }.getOrNull()
             ?: return Result.Error
-        val entry = catalog.firstOrNull { hash in it.giftCodeHashes } ?: return Result.Invalid
 
         val prefs = TimerPreferences.get(context)
-        // Play 구매분/기프트 해금분 어느 쪽으로든 이미 보유하면 중복 처리.
         val data = prefs.load()
+        val passCode = catalog.lifetimePassGiftCodes.firstOrNull { it.hash == hash }
+        if (passCode != null) {
+            if (passCode.isExpired()) return Result.Expired
+            if (data.hasEffectiveLifetimePass) return Result.AlreadyOwned("평생이용권")
+            prefs.grantGiftLifetimePass()
+            SkinRepository.clearCache()
+            return Result.LifetimePassSuccess
+        }
+
+        val entry = catalog.skins.firstOrNull { hash in it.giftCodeHashes } ?: return Result.Invalid
+
+        // Play 구매분/기프트 해금분 어느 쪽으로든 이미 보유하면 중복 처리.
         if (entry.skinId in data.purchasedSkinIds || entry.skinId in data.giftUnlockedSkinIds) {
             return Result.AlreadyOwned(entry.name)
         }
@@ -55,6 +72,13 @@ object GiftCodeRedeemer {
         prefs.addGiftUnlockedSkinId(entry.skinId)
         SkinRepository.clearCache() // 새로 받은 스킨이 즉시 목록/창고에 반영되도록 캐시 무효화
         return Result.Success(entry.skinId, entry.name)
+    }
+
+    private fun LifetimePassGiftCode.isExpired(
+        today: LocalDate = LocalDate.now(ZoneId.systemDefault()),
+    ): Boolean {
+        val expires = expiresAt?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return false
+        return today.isAfter(expires)
     }
 
     /** 비동기 [SkinDownloader.download]를 래치로 감싸 동기 대기한다(이미 백그라운드 스레드에서 호출됨). */

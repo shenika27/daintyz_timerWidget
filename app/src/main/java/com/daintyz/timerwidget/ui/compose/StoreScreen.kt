@@ -79,7 +79,7 @@ fun StoreScreen(onOpenDetail: (VaultItem) -> Unit) {
     fun reload() {
         val data = TimerPreferences.get(context).load()
         purchased = data.purchasedSkinIds
-        hasPass = data.hasLifetimePass
+        hasPass = data.hasEffectiveLifetimePass
         giftUnlocked = data.giftUnlockedSkinIds
         favoriteIds = TimerPreferences.get(context).loadFavoriteSkinIds()
         localSkins = SkinRepository.loadAllSkins(context)

@@ -5,6 +5,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.daintyz.timerwidget.billing.BillingConfig
+import com.daintyz.timerwidget.model.LifetimePassGiftCode
+import com.daintyz.timerwidget.model.RemoteCatalog
 import com.daintyz.timerwidget.model.RemoteSkinEntry
 import org.json.JSONObject
 import java.io.File
@@ -51,7 +53,9 @@ object SkinDownloader {
      *
      * baseUrl을 생략하면 catalog.json이 위치한 폴더를 baseUrl로 사용한다.
      */
-    fun fetchCatalog(url: String): List<RemoteSkinEntry> {
+    fun fetchCatalog(url: String): List<RemoteSkinEntry> = fetchCatalogWithMeta(url).skins
+
+    fun fetchCatalogWithMeta(url: String): RemoteCatalog {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.connectTimeout = 10_000
         conn.readTimeout = 10_000
@@ -76,7 +80,7 @@ object SkinDownloader {
             // 항목 단위로 격리 파싱한다. 디자인레포에서 특정 테마 항목 하나가 깨져도
             // (필수 필드 누락/오타 등) 그 항목만 스킵하고 정상 항목은 그대로 노출 — 카탈로그
             // 전체가 증발하는 all-or-nothing 실패를 막는다.
-            (0 until arr.length()).mapNotNull { i ->
+            val skins = (0 until arr.length()).mapNotNull { i ->
                 runCatching {
                     val obj = arr.getJSONObject(i)
                     val skinId = obj.getString("skinId")
@@ -107,8 +111,25 @@ object SkinDownloader {
                     DevAlert.reportEntryError(url, i, it)
                 }.getOrNull()
             }
+            RemoteCatalog(
+                skins = skins,
+                lifetimePassGiftCodes = parseLifetimePassGiftCodes(json),
+            )
         } finally {
             conn.disconnect()
+        }
+    }
+
+    private fun parseLifetimePassGiftCodes(json: JSONObject): List<LifetimePassGiftCode> {
+        val arr = json.optJSONArray("lifetimePassGiftCodes") ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { i ->
+            val obj = arr.optJSONObject(i) ?: return@mapNotNull null
+            val hash = obj.optString("hash").trim().lowercase()
+            if (hash.isBlank()) return@mapNotNull null
+            LifetimePassGiftCode(
+                hash = hash,
+                expiresAt = obj.optString("expiresAt").ifBlank { null },
+            )
         }
     }
 

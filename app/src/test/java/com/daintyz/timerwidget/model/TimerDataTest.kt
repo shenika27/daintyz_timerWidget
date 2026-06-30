@@ -28,10 +28,19 @@ class TimerDataTest {
         assertFalse(data(TimerState.COMPLETE, targetEndElapsed = now).isExpired(now))
     }
 
+    @Test
+    fun effective_lifetime_pass_accepts_play_or_gift_source() {
+        assertFalse(data(TimerState.IDLE).hasEffectiveLifetimePass)
+        assertTrue(data(TimerState.IDLE, hasLifetimePass = true).hasEffectiveLifetimePass)
+        assertTrue(data(TimerState.IDLE, hasGiftLifetimePass = true).hasEffectiveLifetimePass)
+    }
+
     private fun data(
         state: TimerState,
         targetEndElapsed: Long = 0L,
         remainingAtPause: Long = 0L,
+        hasLifetimePass: Boolean = false,
+        hasGiftLifetimePass: Boolean = false,
     ) = TimerData(
         state = state,
         targetEndElapsed = targetEndElapsed,
@@ -43,5 +52,7 @@ class TimerDataTest {
         selectedCharacterSkinId = "cha01",
         selectedTimerSkinId = "cha01",
         purchasedSkinIds = emptySet(),
+        hasLifetimePass = hasLifetimePass,
+        hasGiftLifetimePass = hasGiftLifetimePass,
     )
 }

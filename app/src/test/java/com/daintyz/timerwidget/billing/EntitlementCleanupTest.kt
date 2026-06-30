@@ -65,6 +65,22 @@ class EntitlementCleanupTest {
     }
 
     @Test
+    fun gift_lifetime_pass_keeps_regular_paid_skin() {
+        val data = timerData(
+            selectedCharacterSkinId = "paid",
+            selectedTimerSkinId = "paid",
+            hasGiftLifetimePass = true,
+        )
+        val localSkins = listOf(skin("paid", isFree = false))
+        val catalog = mapOf("paid" to entry("paid", price = 1000))
+
+        assertEquals(
+            emptySet<String>(),
+            EntitlementCleanup.revokedDownloadedSkinIds(localSkins, catalog, data),
+        )
+    }
+
+    @Test
     fun lifetime_pass_does_not_keep_prestige_skin() {
         val data = timerData(
             selectedCharacterSkinId = "prestige",
@@ -97,6 +113,7 @@ class EntitlementCleanupTest {
         selectedTimerSkinId: String = "cha01",
         purchasedSkinIds: Set<String> = emptySet(),
         hasLifetimePass: Boolean = false,
+        hasGiftLifetimePass: Boolean = false,
         giftUnlockedSkinIds: Set<String> = emptySet(),
     ) = TimerData(
         state = TimerState.IDLE,
@@ -111,6 +128,7 @@ class EntitlementCleanupTest {
         selectedTimerSkinId = selectedTimerSkinId,
         purchasedSkinIds = purchasedSkinIds,
         hasLifetimePass = hasLifetimePass,
+        hasGiftLifetimePass = hasGiftLifetimePass,
         giftUnlockedSkinIds = giftUnlockedSkinIds,
     )
 
