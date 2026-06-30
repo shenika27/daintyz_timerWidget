@@ -28,8 +28,9 @@ object AppLanguage {
     }
 
     fun settingTitle(context: Context): String =
-        if (currentLanguageTag(context) == ENGLISH) "언어설정" else "language"
+        if (currentLanguageTag(context) == ENGLISH) "Language" else "언어설정"
 
+    /** 우측 버튼에 표시할 현재 선택된 언어 라벨(각 언어의 자국어 표기). */
     fun currentLabel(context: Context): String =
         if (currentLanguageTag(context) == ENGLISH) "English" else "한국어"
 
