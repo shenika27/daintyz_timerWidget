@@ -379,7 +379,7 @@ fun DetailScreen(
         // 하단 액션 버튼: 다운로드됨→적용 / 보유O 미다운로드→다운로드(무료=공개·유료=Worker) / 미보유 유료→구매.
         val priceLabel = priceText
             ?: if (isFree || price <= 0) stringResource(R.string.skin_btn_download)
-            else stringResource(R.string.detail_buy_price, "%,d원".format(price))
+            else stringResource(R.string.detail_buy_price, stringResource(R.string.price_won, price))
 
         // 보유했지만 파일이 아직 없는 경우의 다운로드. 무료=공개 CDN, 유료=결제검증 Worker(영수증 토큰 첨부).
         fun startEntitledDownload() {

@@ -55,6 +55,8 @@ import com.daintyz.timerwidget.skin.SkinRepoUrls
 import com.daintyz.timerwidget.skin.SkinRepository
 import com.daintyz.timerwidget.ui.SaleStatus
 import com.daintyz.timerwidget.ui.VaultItem
+import com.daintyz.timerwidget.ui.displayDescription
+import com.daintyz.timerwidget.ui.displayName
 import com.daintyz.timerwidget.ui.priceLabel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -224,6 +226,7 @@ private fun StoreHeroCard(
     onClick: () -> Unit,
 ) {
     val context = LocalContext.current
+    val displayName = item.displayName(context)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -238,13 +241,13 @@ private fun StoreHeroCard(
                 is VaultItem.Local -> BitmapImage(
                     bitmap = item.skin.character.stop.frames.firstOrNull()
                         ?.let { SkinRepository.loadFrameBitmap(context, item.id, it) },
-                    contentDescription = item.name,
+                    contentDescription = displayName,
                     modifier = Modifier.fillMaxSize().padding(20.dp),
                     contentScale = ContentScale.Fit,
                 )
                 is VaultItem.Remote -> RemoteImage(
                     url = item.entry.thumbnailUrl,
-                    contentDescription = item.name,
+                    contentDescription = displayName,
                     modifier = Modifier.fillMaxSize().padding(20.dp),
                     contentScale = ContentScale.Fit,
                 )
@@ -293,12 +296,12 @@ private fun StoreHeroCard(
         ) {
             Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text(
-                    text = item.name,
+                    text = displayName,
                     color = AppColors.TextPrimary,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                 )
-                item.description?.let { desc ->
+                item.displayDescription(context)?.let { desc ->
                     Text(
                         text = desc,
                         color = AppColors.Brown,
@@ -327,7 +330,7 @@ private fun StoreHeroCard(
                         .padding(horizontal = 14.dp, vertical = 7.dp),
                 )
                 else -> Text(
-                    text = priceLabel(item),
+                    text = priceLabel(context, item),
                     color = AppColors.TextPrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,

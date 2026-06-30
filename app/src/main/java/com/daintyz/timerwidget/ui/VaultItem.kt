@@ -1,7 +1,11 @@
 package com.daintyz.timerwidget.ui
 
+import android.content.Context
+import com.daintyz.timerwidget.R
 import com.daintyz.timerwidget.model.RemoteSkinEntry
 import com.daintyz.timerwidget.model.Skin
+import com.daintyz.timerwidget.model.displayDescription
+import com.daintyz.timerwidget.model.displayName
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -82,6 +86,31 @@ sealed interface VaultItem {
  */
 fun priceLabel(item: VaultItem, prestigeMark: Boolean = false): String {
     val base = if (item.isFree || item.price <= 0) "무료" else "%,d원".format(item.price)
+    return if (prestigeMark && item.prestige) "✦ $base" else base
+}
+
+fun VaultItem.displayName(context: Context): String {
+    val language = AppLanguage.currentLanguageTag(context)
+    return when (this) {
+        is VaultItem.Local -> catalogEntry?.displayName(language) ?: skin.displayName(language)
+        is VaultItem.Remote -> entry.displayName(language)
+    }
+}
+
+fun VaultItem.displayDescription(context: Context): String? {
+    val language = AppLanguage.currentLanguageTag(context)
+    return when (this) {
+        is VaultItem.Local -> catalogEntry?.displayDescription(language) ?: skin.displayDescription(language)
+        is VaultItem.Remote -> entry.displayDescription(language)
+    }
+}
+
+fun priceLabel(context: Context, item: VaultItem, prestigeMark: Boolean = false): String {
+    val base = if (item.isFree || item.price <= 0) {
+        context.getString(R.string.skin_badge_free)
+    } else {
+        context.getString(R.string.price_won, item.price)
+    }
     return if (prestigeMark && item.prestige) "✦ $base" else base
 }
 

@@ -70,6 +70,7 @@ import com.daintyz.timerwidget.skin.SkinRepoUrls
 import com.daintyz.timerwidget.skin.SkinRepository
 import com.daintyz.timerwidget.ui.SaleStatus
 import com.daintyz.timerwidget.ui.VaultItem
+import com.daintyz.timerwidget.ui.displayName
 import com.daintyz.timerwidget.ui.priceLabel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -204,7 +205,7 @@ fun VaultScreen(
 
         // 테마 이름.
         Text(
-            text = focused.name,
+            text = focused.displayName(context),
             style = AppTypography.headlineSmall,
             color = AppColors.OnSurface,
             fontSize = 24.sp,
@@ -271,7 +272,7 @@ fun VaultScreen(
                 TimerController.selectTimerSkin(context, focused.id)
                 appliedId = focused.id
                 Toast.makeText(
-                    context, context.getString(R.string.vault_applied_toast, focused.name),
+                    context, context.getString(R.string.vault_applied_toast, focused.displayName(context)),
                     Toast.LENGTH_SHORT
                 ).show()
             },
@@ -294,7 +295,7 @@ fun VaultScreen(
                             failedDownloadIds.value + entry.skinId
                         }
                         val msg = if (success)
-                            "${entry.name} ${context.getString(R.string.skin_download_complete)}"
+                            "${focused.displayName(context)} ${context.getString(R.string.skin_download_complete)}"
                         else context.getString(R.string.skin_download_fail)
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         reload()
@@ -411,6 +412,7 @@ private fun VaultCard(
     applied: Boolean,
     onToggleStar: () -> Unit,
 ) {
+    val context = LocalContext.current
     Box(modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 12.dp)) {
         // 카드.
         Box(
@@ -428,7 +430,7 @@ private fun VaultCard(
                     val scale = rememberCardContentScale(item)
                     BitmapImage(
                         bitmap = bmp,
-                        contentDescription = item.name,
+                        contentDescription = item.displayName(context),
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(14.dp)
@@ -438,7 +440,7 @@ private fun VaultCard(
                 }
                 is VaultItem.Remote -> RemoteImage(
                     url = item.entry.thumbnailUrl,
-                    contentDescription = item.name,
+                    contentDescription = item.displayName(context),
                     modifier = Modifier.fillMaxSize().padding(14.dp),
                     contentScale = ContentScale.Fit,
                 )
@@ -472,7 +474,7 @@ private fun VaultCard(
             )
         } else if (!item.owned) {
             Text(
-                text = priceLabel(item, prestigeMark = true),
+                text = priceLabel(context, item, prestigeMark = true),
                 color = AppColors.TextPrimary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,

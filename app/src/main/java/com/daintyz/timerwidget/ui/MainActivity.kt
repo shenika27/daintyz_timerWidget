@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity() {
     private fun openDetail(item: VaultItem, openedFromStore: Boolean = false) {
         startActivity(Intent(this, DetailActivity::class.java).apply {
             putExtra(DetailActivity.EXTRA_SKIN_ID, item.id)
-            putExtra(DetailActivity.EXTRA_NAME, item.name)
+            putExtra(DetailActivity.EXTRA_NAME, item.displayName(this@MainActivity))
             putExtra(DetailActivity.EXTRA_OWNED, item.owned)
             putExtra(DetailActivity.EXTRA_IS_FREE, item.isFree)
             putExtra(DetailActivity.EXTRA_PRICE, item.price)

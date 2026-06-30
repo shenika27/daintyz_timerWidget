@@ -110,6 +110,13 @@ class TimerPreferences private constructor(context: Context) {
     fun isUseSystemFont(): Boolean = prefs.getBoolean(KEY_USE_SYSTEM_FONT, false)
     fun setUseSystemFont(on: Boolean) = prefs.edit().putBoolean(KEY_USE_SYSTEM_FONT, on).apply()
 
+    /** 앱 내부 언어 태그. null이면 기기 언어를 따른다. */
+    fun appLanguageTag(): String? =
+        prefs.getString(KEY_APP_LANGUAGE_TAG, null)?.takeIf { it.isNotBlank() }
+
+    fun setAppLanguageTag(tag: String) =
+        prefs.edit().putString(KEY_APP_LANGUAGE_TAG, tag).apply()
+
     /** Google Play 결제 성공 시 구매 스킨을 추가한다(중복은 Set이 흡수). 결제 연동(Phase 4)에서 사용. */
     fun addPurchasedSkinId(skinId: String) {
         update { it.copy(purchasedSkinIds = it.purchasedSkinIds + skinId) }
@@ -178,6 +185,7 @@ class TimerPreferences private constructor(context: Context) {
         private const val KEY_COMPLETE_REPEAT_SECONDS = "complete_repeat_seconds"
         private const val KEY_VIBRATE = "vibrate_enabled"
         private const val KEY_USE_SYSTEM_FONT = "use_system_font"
+        private const val KEY_APP_LANGUAGE_TAG = "app_language_tag"
 
         @Volatile
         private var instance: TimerPreferences? = null

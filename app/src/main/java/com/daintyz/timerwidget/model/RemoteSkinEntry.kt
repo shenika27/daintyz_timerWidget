@@ -29,6 +29,7 @@ data class RemoteSkinEntry(
     val baseUrl: String,
     /** 상점 히어로 카드 부제(한 줄 설명). 없으면 카드에서 부제 줄 생략. */
     val description: String? = null,
+    val localized: Map<String, LocalizedSkinText> = emptyMap(),
     /** 출시일("yyyy-MM-dd"). 상점 NEW 배지 판정 기준(출시일+7일 이내). 없으면 NEW 안 뜸. */
     val createdAt: String? = null,
     /**
@@ -51,3 +52,17 @@ data class RemoteSkinEntry(
      */
     val giftCodeHashes: List<String> = emptyList()
 )
+
+data class LocalizedSkinText(
+    val name: String? = null,
+    val description: String? = null,
+)
+
+fun RemoteSkinEntry.displayName(languageTag: String): String =
+    localizedText(languageTag)?.name?.takeIf { it.isNotBlank() } ?: name
+
+fun RemoteSkinEntry.displayDescription(languageTag: String): String? =
+    localizedText(languageTag)?.description?.takeIf { it.isNotBlank() } ?: description
+
+private fun RemoteSkinEntry.localizedText(languageTag: String): LocalizedSkinText? =
+    localized[languageTag.lowercase()] ?: localized[languageTag.substringBefore('-').lowercase()]

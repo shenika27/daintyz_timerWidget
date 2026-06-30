@@ -6,6 +6,7 @@ import android.os.Looper
 import android.util.Log
 import com.daintyz.timerwidget.billing.BillingConfig
 import com.daintyz.timerwidget.model.LifetimePassGiftCode
+import com.daintyz.timerwidget.model.LocalizedSkinText
 import com.daintyz.timerwidget.model.RemoteCatalog
 import com.daintyz.timerwidget.model.RemoteSkinEntry
 import org.json.JSONObject
@@ -98,6 +99,7 @@ object SkinDownloader {
                             .ifBlank { SkinRepoUrls.themeThumb(skinId, baseUrl) },
                         baseUrl = baseUrl,
                         description = obj.optString("description").ifBlank { null },
+                        localized = parseLocalized(obj),
                         createdAt = obj.optString("createdAt").ifBlank { null },
                         hidden = obj.optBoolean("hidden", false),
                         saleStart = obj.optString("saleStart").ifBlank { null },
@@ -118,6 +120,17 @@ object SkinDownloader {
         } finally {
             conn.disconnect()
         }
+    }
+
+    private fun parseLocalized(json: JSONObject): Map<String, LocalizedSkinText> {
+        val localized = json.optJSONObject("localized") ?: return emptyMap()
+        return localized.keys().asSequence().mapNotNull { rawKey ->
+            val key = rawKey.trim().lowercase().ifBlank { return@mapNotNull null }
+            val obj = localized.optJSONObject(rawKey) ?: return@mapNotNull null
+            val name = obj.optString("name").ifBlank { null }
+            val description = obj.optString("description").ifBlank { null }
+            if (name == null && description == null) null else key to LocalizedSkinText(name, description)
+        }.toMap()
     }
 
     private fun parseLifetimePassGiftCodes(json: JSONObject): List<LifetimePassGiftCode> {

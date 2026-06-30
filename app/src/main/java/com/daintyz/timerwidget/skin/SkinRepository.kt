@@ -9,6 +9,7 @@ import com.daintyz.timerwidget.model.ButtonStyle
 import com.daintyz.timerwidget.model.CharacterStates
 import com.daintyz.timerwidget.model.ConditionalFrameSet
 import com.daintyz.timerwidget.model.FrameSet
+import com.daintyz.timerwidget.model.LocalizedSkinText
 import com.daintyz.timerwidget.model.RunningState
 import com.daintyz.timerwidget.model.Skin
 import com.daintyz.timerwidget.model.TimerButtons
@@ -161,6 +162,7 @@ object SkinRepository {
             isFree = json.optBoolean("isFree", false),
             prestige = json.optBoolean("prestige", false),
             description = json.optString("description").ifBlank { null },
+            localized = parseLocalized(json),
             createdAt = json.optString("createdAt").ifBlank { null },
             bundled = bundled,
             character = CharacterStates(
@@ -172,6 +174,17 @@ object SkinRepository {
             // timer 블록 생략 시 기본 스킨(내장 박스/구분선/기호 버튼)으로 폴백.
             timer = parseTimerSkin(json.optJSONObject("timer") ?: JSONObject())
         )
+    }
+
+    private fun parseLocalized(json: JSONObject): Map<String, LocalizedSkinText> {
+        val localized = json.optJSONObject("localized") ?: return emptyMap()
+        return localized.keys().asSequence().mapNotNull { rawKey ->
+            val key = rawKey.trim().lowercase().ifBlank { return@mapNotNull null }
+            val obj = localized.optJSONObject(rawKey) ?: return@mapNotNull null
+            val name = obj.optString("name").ifBlank { null }
+            val description = obj.optString("description").ifBlank { null }
+            if (name == null && description == null) null else key to LocalizedSkinText(name, description)
+        }.toMap()
     }
 
     private fun parseTimerSkin(obj: JSONObject): TimerSkin = TimerSkin(

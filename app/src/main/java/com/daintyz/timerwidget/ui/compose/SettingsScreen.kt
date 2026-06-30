@@ -26,6 +26,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -54,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -64,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.daintyz.timerwidget.R
 import com.daintyz.timerwidget.billing.BillingManager
 import com.daintyz.timerwidget.billing.EntitlementSync
 import com.daintyz.timerwidget.controller.TimerController
@@ -71,6 +75,7 @@ import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.LayoutMode
 import com.daintyz.timerwidget.notification.TimerNotifications
 import com.daintyz.timerwidget.skin.GiftCodeRedeemer
+import com.daintyz.timerwidget.ui.AppLanguage
 import com.daintyz.timerwidget.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -105,6 +110,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
     var hasPass by remember { mutableStateOf(prefs.load().hasEffectiveLifetimePass) }
     var passPriceText by remember { mutableStateOf<String?>(null) }
     var buyingPass by remember { mutableStateOf(false) }
+    var languageMenuExpanded by remember { mutableStateOf(false) }
 
     val versionName = remember {
         runCatching {
@@ -146,36 +152,39 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text("설정", color = AppColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.nav_settings), color = AppColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
         // ── 타이머 ──
-        SectionHeader("타이머")
-        SettingRow("시간 조절") {
+        SectionHeader(stringResource(R.string.settings_section_timer))
+        SettingRow(stringResource(R.string.settings_time_step)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 CompactField(stepMin, { stepMin = it }, width = 48.dp, keyboardType = KeyboardType.Number, textAlign = TextAlign.Center)
-                Text("분", color = AppColors.Brown, fontSize = 13.sp)
+                Text(stringResource(R.string.settings_minutes_suffix), color = AppColors.Brown, fontSize = 13.sp)
                 CompactField(stepSec, { stepSec = it }, width = 48.dp, keyboardType = KeyboardType.Number, textAlign = TextAlign.Center)
-                Text("초", color = AppColors.Brown, fontSize = 13.sp)
-                SmallButton("저장") {
+                Text(stringResource(R.string.settings_seconds_suffix), color = AppColors.Brown, fontSize = 13.sp)
+                SmallButton(stringResource(R.string.settings_save)) {
                     val m = stepMin.text.toIntOrNull() ?: 0
                     val s = stepSec.text.toIntOrNull() ?: 0
                     val total = m * 60 + s
                     if (total < 5) {
-                        toast(context, "5초보다 짧게는 조절할 수 없어요")
+                        toast(context, context.getString(R.string.settings_step_too_short))
                     } else {
                         TimerController.setStepSeconds(context, total)
                         // 클램프된 실제 저장값으로 입력칸을 다시 동기화.
                         val saved = TimerPreferences.get(context).load().stepSeconds
                         stepMin = TextFieldValue((saved / 60).toString())
                         stepSec = TextFieldValue((saved % 60).toString())
-                        toast(context, "한 번에 ${saved / 60}분 ${saved % 60}초씩 조절돼요")
+                        toast(context, context.getString(R.string.settings_step_saved, saved / 60, saved % 60))
                     }
                 }
             }
         }
-        SettingRow("타이머 위치") {
+        SettingRow(stringResource(R.string.settings_timer_position)) {
             SegmentedToggle(
-                options = listOf("위", "아래"),
+                options = listOf(
+                    stringResource(R.string.settings_layout_top_short),
+                    stringResource(R.string.settings_layout_bottom_short),
+                ),
                 selectedIndex = if (layoutMode == LayoutMode.TOP) 0 else 1,
             ) { idx ->
                 val mode = if (idx == 0) LayoutMode.TOP else LayoutMode.BOTTOM
@@ -185,25 +194,25 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
         }
 
         // ── 알림 ──
-        SectionHeader("알림")
-        SettingRow("완료음") {
+        SectionHeader(stringResource(R.string.settings_section_notifications))
+        SettingRow(stringResource(R.string.settings_complete_sound)) {
             ThemedSwitch(completeSound) {
                 completeSound = it
                 prefs.setCompleteSoundEnabled(it)
             }
         }
-        SettingRow("진동") {
+        SettingRow(stringResource(R.string.settings_vibration)) {
             ThemedSwitch(vibrate) {
                 vibrate = it
                 prefs.setVibrateEnabled(it)
             }
         }
         SettingRow(
-            title = "완료 알림 반복",
+            title = stringResource(R.string.settings_complete_repeat),
             subtitle = if (completeRepeat) {
-                "소리와 진동을 ${completeRepeatSeconds}초 동안 반복"
+                stringResource(R.string.settings_complete_repeat_on, completeRepeatSeconds)
             } else {
-                "소리와 진동을 한 번만 재생"
+                stringResource(R.string.settings_complete_repeat_off)
             },
         ) {
             Checkbox(
@@ -252,7 +261,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                 ),
             )
             Text(
-                "${completeRepeatSeconds}초",
+                stringResource(R.string.settings_seconds_value, completeRepeatSeconds),
                 color = if (completeRepeat) AppColors.Brown else AppColors.Dim,
                 fontSize = 11.sp,
                 modifier = Modifier.fillMaxWidth(),
@@ -260,18 +269,21 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             )
         }
         SettingRow(
-            title = "시스템 알림 설정",
-            subtitle = "진행·완료 알림을 폰 설정에서 변경",
+            title = stringResource(R.string.settings_system_notifications),
+            subtitle = stringResource(R.string.settings_system_notifications_subtitle),
             onClick = { openAppNotificationSettings(context) },
         ) {
             Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = AppColors.Brown)
         }
 
         // ── 표시 ──
-        SectionHeader("표시")
-        SettingRow("앱 글꼴") {
+        SectionHeader(stringResource(R.string.settings_section_display))
+        SettingRow(stringResource(R.string.settings_app_font)) {
             SegmentedToggle(
-                options = listOf("기본", "시스템 글꼴"),
+                options = listOf(
+                    stringResource(R.string.settings_font_default),
+                    stringResource(R.string.settings_font_system),
+                ),
                 selectedIndex = if (useSystemFont) 1 else 0,
             ) { idx ->
                 val system = idx == 1
@@ -280,33 +292,66 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                 AppFontState.set(system) // 앱 전체 즉시 재구성
             }
         }
+        val languageTitle = AppLanguage.settingTitle(context)
+        val languageValue = AppLanguage.currentLabel(context)
+        SettingRow(
+            title = languageTitle,
+        ) {
+            Box {
+                TextButton(onClick = { languageMenuExpanded = true }) {
+                    Text(languageValue, color = AppColors.Primary, fontWeight = FontWeight.Bold)
+                }
+                DropdownMenu(
+                    expanded = languageMenuExpanded,
+                    onDismissRequest = { languageMenuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("한국어", color = AppColors.TextPrimary) },
+                        onClick = {
+                            languageMenuExpanded = false
+                            AppLanguage.select(context, AppLanguage.KOREAN)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("English", color = AppColors.TextPrimary) },
+                        onClick = {
+                            languageMenuExpanded = false
+                            AppLanguage.select(context, AppLanguage.ENGLISH)
+                        },
+                    )
+                }
+            }
+        }
 
         // ── 기타 ──
-        SectionHeader("기타")
+        SectionHeader(stringResource(R.string.settings_section_other))
         SettingRow(
-            title = "위젯 새로고침",
-            subtitle = "위젯이 멈췄거나 예전 모습으로 보일 때",
+            title = stringResource(R.string.settings_refresh_widget),
+            subtitle = stringResource(R.string.settings_refresh_widget_subtitle),
             onClick = {
                 TimerNotifications.ensureChannels(context)
                 WidgetUpdater.updateAllWidgets(context)
-                toast(context, "위젯 새로고침 완료")
+                toast(context, context.getString(R.string.settings_refresh_widget_done))
             },
         ) {
             Icon(Icons.Filled.Refresh, contentDescription = null, tint = AppColors.Brown)
         }
         SettingRow(
-            title = "평생이용권",
-            subtitle = if (hasPass) "보유 중"
-                else passPriceText?.let { "$it · 프리스티지 제외 일괄 해금" }
-                    ?: "프리스티지 제외 유료 테마 일괄 해금",
+            title = stringResource(R.string.lifetime_pass_buy),
+            subtitle = if (hasPass) stringResource(R.string.lifetime_pass_owned)
+                else passPriceText?.let { stringResource(R.string.settings_lifetime_pass_price_subtitle, it) }
+                    ?: stringResource(R.string.settings_lifetime_pass_subtitle),
         ) {
             if (hasPass) {
                 Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AppColors.Primary)
             } else {
-                SmallButton(if (buyingPass) "확인 중…" else "구매", enabled = !buyingPass) {
+                SmallButton(
+                    if (buyingPass) stringResource(R.string.settings_checking) else stringResource(R.string.skin_btn_buy),
+                    enabled = !buyingPass
+                ) {
                     val act = context.findActivity()
                     if (act == null) {
-                        toast(context, "결제를 준비 중이에요")
+                        toast(context, context.getString(R.string.store_buy_stub))
                     } else {
                         scope.launch {
                             buyingPass = true
@@ -315,7 +360,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                             }
                             buyingPass = false
                             // 결과는 비동기 도착 → ON_RESUME의 sync()에서 hasPass 갱신.
-                            if (details == null) toast(context, "결제를 준비 중이에요")
+                            if (details == null) toast(context, context.getString(R.string.store_buy_stub))
                             else BillingManager.launchPurchase(act, details)
                         }
                     }
@@ -323,29 +368,38 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             }
         }
         SettingRow(
-            title = "구매 복원",
-            subtitle = "기기를 바꿨거나 앱을 다시 설치했을 때",
+            title = stringResource(R.string.settings_restore_purchases),
+            subtitle = stringResource(R.string.settings_restore_purchases_subtitle),
             onClick = if (restoring) null else {
                 {
                     scope.launch {
                         restoring = true
                         val result = EntitlementSync.syncFromPlayAndCleanup(context)
                         restoring = false
-                        toast(context, if (result.synced) "구매 내역을 확인했어요" else "구매 내역 확인에 실패했어요")
+                        toast(
+                            context,
+                            context.getString(
+                                if (result.synced) R.string.settings_restore_success
+                                else R.string.settings_restore_fail
+                            )
+                        )
                     }
                 }
             },
         ) {
             if (restoring) {
-                Text("확인 중…", color = AppColors.Brown, fontSize = 13.sp)
+                Text(stringResource(R.string.settings_checking), color = AppColors.Brown, fontSize = 13.sp)
             } else {
                 Icon(Icons.Filled.Restore, contentDescription = null, tint = AppColors.Brown)
             }
         }
-        SettingRow("기프트코드") {
+        SettingRow(stringResource(R.string.settings_gift_code)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CompactField(giftCode, { giftCode = it }, width = 120.dp, enabled = !redeeming)
-                SmallButton(if (redeeming) "확인 중…" else "해금", enabled = !redeeming && giftCode.text.isNotBlank()) {
+                SmallButton(
+                    if (redeeming) stringResource(R.string.settings_checking) else stringResource(R.string.settings_redeem),
+                    enabled = !redeeming && giftCode.text.isNotBlank()
+                ) {
                     val code = giftCode.text
                     scope.launch {
                         redeeming = true
@@ -362,17 +416,17 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                                 lifetimePassUnlocked = true
                             }
                             is GiftCodeRedeemer.Result.AlreadyOwned ->
-                                toast(context, "이미 보유 중이에요 (${result.name})")
-                            GiftCodeRedeemer.Result.Used -> toast(context, "이미 사용된 코드예요")
-                            GiftCodeRedeemer.Result.Expired -> toast(context, "유효기간이 지난 코드예요")
-                            GiftCodeRedeemer.Result.Invalid -> toast(context, "앗, 코드를 다시 확인해 주세요")
-                            GiftCodeRedeemer.Result.Error -> toast(context, "연결이 불안정해요. 잠시 후 다시 시도해 주세요")
+                                toast(context, context.getString(R.string.settings_gift_already_owned, result.name))
+                            GiftCodeRedeemer.Result.Used -> toast(context, context.getString(R.string.settings_gift_used))
+                            GiftCodeRedeemer.Result.Expired -> toast(context, context.getString(R.string.settings_gift_expired))
+                            GiftCodeRedeemer.Result.Invalid -> toast(context, context.getString(R.string.settings_gift_invalid))
+                            GiftCodeRedeemer.Result.Error -> toast(context, context.getString(R.string.settings_gift_error))
                         }
                     }
                 }
             }
         }
-        SettingRow("앱 버전") {
+        SettingRow(stringResource(R.string.settings_app_version)) {
             Text(if (versionName.isNotBlank()) "v$versionName" else "—", color = AppColors.Brown, fontSize = 13.sp)
         }
     }
@@ -382,13 +436,13 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
             AlertDialog(
                 onDismissRequest = { lifetimePassUnlocked = false },
                 icon = { Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AppColors.Primary) },
-                title = { Text("평생이용권 해금 완료!", color = AppColors.TextPrimary) },
-                text = { Text("프리스티지 제외 유료 테마가 열렸어요.", color = AppColors.Brown) },
+                title = { Text(stringResource(R.string.settings_lifetime_unlocked_title), color = AppColors.TextPrimary) },
+                text = { Text(stringResource(R.string.settings_lifetime_unlocked_text), color = AppColors.Brown) },
                 shape = RoundedCornerShape(20.dp),
                 containerColor = AppColors.Background,
                 confirmButton = {
                     TextButton(onClick = { lifetimePassUnlocked = false }) {
-                        Text("확인", color = AppColors.Primary, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.settings_confirm), color = AppColors.Primary, fontWeight = FontWeight.Bold)
                     }
                 },
             )
@@ -400,19 +454,19 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
         AlertDialog(
             onDismissRequest = { unlockedSkin = null },
             icon = { Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AppColors.Primary) },
-            title = { Text("$name 해금 완료!", color = AppColors.TextPrimary) },
-            text = { Text("보유 목록에서 확인해볼까요?", color = AppColors.Brown) },
+            title = { Text(stringResource(R.string.settings_skin_unlocked_title, name), color = AppColors.TextPrimary) },
+            text = { Text(stringResource(R.string.settings_skin_unlocked_text), color = AppColors.Brown) },
             shape = RoundedCornerShape(20.dp),
             containerColor = AppColors.Background,
             confirmButton = {
                 TextButton(onClick = {
                     unlockedSkin = null
                     onGoToVault(skinId)
-                }) { Text("보유 목록으로", color = AppColors.Primary, fontWeight = FontWeight.Bold) }
+                }) { Text(stringResource(R.string.settings_go_to_vault), color = AppColors.Primary, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { unlockedSkin = null }) {
-                    Text("닫기", color = AppColors.Brown)
+                    Text(stringResource(R.string.settings_close), color = AppColors.Brown)
                 }
             },
         )
