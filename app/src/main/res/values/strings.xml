@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">캐릭터 타이머</string>
+    <string name="app_name">마이 미니 타이머</string>
 
     <!-- 위젯 -->
     <string name="widget_description">캐릭터가 함께 달려주는 타이머 위젯</string>
@@ -31,7 +31,7 @@
     <string name="notif_complete_text">설정한 시간이 끝났어요.</string>
 
     <!-- 메인 화면 -->
-    <string name="main_title">캐릭터 타이머</string>
+    <string name="main_title">마이 미니 타이머</string>
     <string name="label_state">상태</string>
     <string name="label_remaining">남은 시간</string>
     <string name="label_step">증감 단위(분)</string>
