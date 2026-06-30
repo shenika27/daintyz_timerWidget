@@ -129,6 +129,7 @@ object SkinDownloader {
             LifetimePassGiftCode(
                 hash = hash,
                 expiresAt = obj.optString("expiresAt").ifBlank { null },
+                maxUses = obj.optInt("maxUses", 0).coerceAtLeast(0),
             )
         }
     }
@@ -180,6 +181,7 @@ object SkinDownloader {
         skinId: String,
         purchaseToken: String?,
         passToken: String?,
+        giftPassToken: String? = null,
         onProgress: (percent: Int) -> Unit,
         onComplete: (success: Boolean) -> Unit
     ) {
@@ -195,6 +197,7 @@ object SkinDownloader {
                     put("skinId", skinId)
                     if (!purchaseToken.isNullOrBlank()) put("purchaseToken", purchaseToken)
                     if (!passToken.isNullOrBlank()) put("passToken", passToken)
+                    if (!giftPassToken.isNullOrBlank()) put("giftPassToken", giftPassToken)
                 }.toString()
 
                 val conn = (URL(BillingConfig.downloadUrl).openConnection() as HttpURLConnection).apply {

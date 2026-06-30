@@ -15,4 +15,6 @@ data class LifetimePassGiftCode(
     val hash: String,
     /** yyyy-MM-dd. 해당 날짜까지 입력 가능하며, null이면 만료 제한 없음. */
     val expiresAt: String? = null,
+    /** 0이면 제한 없음, 1이면 서버에서 1회 소진 처리. */
+    val maxUses: Int = 0,
 )

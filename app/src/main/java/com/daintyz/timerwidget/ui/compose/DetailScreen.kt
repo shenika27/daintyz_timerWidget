@@ -404,6 +404,7 @@ fun DetailScreen(
                         skinId = skinId,
                         purchaseToken = productId?.let { tokens[it] },
                         passToken = tokens[BillingManager.LIFETIME_PASS_PRODUCT_ID],
+                        giftPassToken = TimerPreferences.get(context).giftLifetimePassToken(),
                         onProgress = { percent -> downloadProgress = percent },
                         onComplete = { success ->
                             downloadProgress = null

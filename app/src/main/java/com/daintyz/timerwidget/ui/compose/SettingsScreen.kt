@@ -293,6 +293,7 @@ fun SettingsScreen(onGoToVault: (skinId: String) -> Unit = {}) {
                             }
                             is GiftCodeRedeemer.Result.AlreadyOwned ->
                                 toast(context, "이미 보유 중이에요 (${result.name})")
+                            GiftCodeRedeemer.Result.Used -> toast(context, "이미 사용된 코드예요")
                             GiftCodeRedeemer.Result.Expired -> toast(context, "유효기간이 지난 코드예요")
                             GiftCodeRedeemer.Result.Invalid -> toast(context, "앗, 코드를 다시 확인해 주세요")
                             GiftCodeRedeemer.Result.Error -> toast(context, "연결이 불안정해요. 잠시 후 다시 시도해 주세요")

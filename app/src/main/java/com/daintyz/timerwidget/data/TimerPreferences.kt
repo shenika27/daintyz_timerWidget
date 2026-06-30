@@ -104,9 +104,15 @@ class TimerPreferences private constructor(context: Context) {
     }
 
     /** 기프트코드로 평생이용권을 지급한다. Play 결제 평생이용권과 분리 보관해 구매 동기화 회수 대상에서 제외한다. */
-    fun grantGiftLifetimePass() {
+    fun grantGiftLifetimePass(giftPassToken: String? = null) {
         update { it.copy(hasGiftLifetimePass = true) }
+        if (!giftPassToken.isNullOrBlank()) {
+            prefs.edit().putString(KEY_GIFT_LIFETIME_PASS_TOKEN, giftPassToken).apply()
+        }
     }
+
+    fun giftLifetimePassToken(): String? =
+        prefs.getString(KEY_GIFT_LIFETIME_PASS_TOKEN, null)?.takeIf { it.isNotBlank() }
 
     /** [load] → 변형 → [save]를 한 번에. 변형 결과를 그대로 반환한다. */
     inline fun update(transform: (TimerData) -> TimerData): TimerData {
@@ -144,6 +150,7 @@ class TimerPreferences private constructor(context: Context) {
         private const val KEY_PURCHASED_SKIN_IDS = "purchased_skin_ids"
         private const val KEY_LIFETIME_PASS = "has_lifetime_pass"
         private const val KEY_GIFT_LIFETIME_PASS = "has_gift_lifetime_pass"
+        private const val KEY_GIFT_LIFETIME_PASS_TOKEN = "gift_lifetime_pass_token"
         private const val KEY_GIFT_UNLOCKED_SKIN_IDS = "gift_unlocked_skin_ids"
         private const val KEY_FAVORITE_SKIN_IDS = "favorite_skin_ids"
         private const val KEY_COMPLETE_SOUND = "complete_sound_enabled"

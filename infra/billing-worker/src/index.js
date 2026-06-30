@@ -75,12 +75,15 @@ async function handleRedeem(request, env) {
   const passCode = catalog.lifetimePassGiftCodes.find((c) => c && c.hash === hash);
   if (!passCode) return json({ error: "invalid_code" }, 404);
   if (isExpired(passCode.expiresAt)) return json({ error: "expired_code" }, 410);
-
+  if (!giftPassSecret(env)) return json({ error: "gift_pass_signing_secret_missing" }, 500);
   const token = await signGiftPassToken(env, {
     v: 1,
     kind: "gift_lifetime_pass",
     iat: Math.floor(Date.now() / 1000),
   });
+  const consumeResult = await consumeGiftCodeIfLimited(env, passCode);
+  if (consumeResult === "db_missing") return json({ error: "gift_code_db_missing" }, 500);
+  if (consumeResult === "used") return json({ error: "used_code" }, 409);
   return json({ type: "lifetime_pass", giftPassToken: token });
 }
 
@@ -194,6 +197,7 @@ async function loadCatalogData(env) {
           .map((c) => ({
             hash: String(c && c.hash || "").trim().toLowerCase(),
             expiresAt: String(c && c.expiresAt || "").trim(),
+            maxUses: Math.max(0, Number(c && c.maxUses) || 0),
           }))
           .filter((c) => /^[a-f0-9]{64}$/.test(c.hash))
       : [],
@@ -210,6 +214,27 @@ function isExpired(expiresAt) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(expiresAt || ""))) return false;
   const today = new Date().toISOString().slice(0, 10);
   return today > expiresAt;
+}
+
+async function consumeGiftCodeIfLimited(env, passCode) {
+  const maxUses = Math.max(0, Number(passCode && passCode.maxUses) || 0);
+  if (maxUses <= 0) return "ok";
+  if (!env.GIFT_CODES_DB) return "db_missing";
+
+  const now = new Date().toISOString();
+  await env.GIFT_CODES_DB.prepare(
+    "INSERT OR IGNORE INTO gift_code_usage (hash, used_count) VALUES (?, 0)",
+  ).bind(passCode.hash).run();
+
+  const result = await env.GIFT_CODES_DB.prepare(
+    "UPDATE gift_code_usage " +
+      "SET used_count = used_count + 1, " +
+      "first_used_at = COALESCE(first_used_at, ?), " +
+      "last_used_at = ? " +
+      "WHERE hash = ? AND used_count < ?",
+  ).bind(now, now, passCode.hash, maxUses).run();
+  const changes = Number(result && result.meta && result.meta.changes) || 0;
+  return changes > 0 ? "ok" : "used";
 }
 
 async function sha256Hex(input) {

@@ -1,8 +1,12 @@
 package com.daintyz.timerwidget.skin
 
 import android.content.Context
+import com.daintyz.timerwidget.billing.BillingConfig
 import com.daintyz.timerwidget.data.TimerPreferences
 import com.daintyz.timerwidget.model.LifetimePassGiftCode
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.ZoneId
@@ -28,6 +32,8 @@ object GiftCodeRedeemer {
         object Expired : Result
         /** 일치하는 코드 없음(오타/만료/잘못된 코드). */
         object Invalid : Result
+        /** 1회 소진 코드가 이미 사용됨. */
+        object Used : Result
         /** 이미 보유한 스킨/이용권의 코드. */
         data class AlreadyOwned(val name: String) : Result
         /** 네트워크/다운로드 실패. */
@@ -56,9 +62,7 @@ object GiftCodeRedeemer {
         if (passCode != null) {
             if (passCode.isExpired()) return Result.Expired
             if (data.hasEffectiveLifetimePass) return Result.AlreadyOwned("평생이용권")
-            prefs.grantGiftLifetimePass()
-            SkinRepository.clearCache()
-            return Result.LifetimePassSuccess
+            return redeemLifetimePassWithWorker(code, prefs)
         }
 
         val entry = catalog.skins.firstOrNull { hash in it.giftCodeHashes } ?: return Result.Invalid
@@ -79,6 +83,54 @@ object GiftCodeRedeemer {
     ): Boolean {
         val expires = expiresAt?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return false
         return today.isAfter(expires)
+    }
+
+    private fun redeemLifetimePassWithWorker(
+        code: String,
+        prefs: TimerPreferences,
+    ): Result {
+        if (!BillingConfig.isConfigured) return Result.Error
+        val response = runCatching {
+            val body = JSONObject().put("code", code).toString()
+            val conn = (URL(BillingConfig.redeemUrl).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 10_000
+                requestMethod = "POST"
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("Accept", "application/json")
+            }
+            try {
+                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                val text = if (conn.responseCode in 200..299) {
+                    conn.inputStream.bufferedReader().use { it.readText() }
+                } else {
+                    conn.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                }
+                conn.responseCode to text
+            } finally {
+                conn.disconnect()
+            }
+        }.getOrNull() ?: return Result.Error
+
+        val (status, text) = response
+        return when (status) {
+            HttpURLConnection.HTTP_OK -> {
+                val token = runCatching { JSONObject(text).optString("giftPassToken") }.getOrNull()
+                if (token.isNullOrBlank()) {
+                    Result.Error
+                } else {
+                    prefs.grantGiftLifetimePass(token)
+                    SkinRepository.clearCache()
+                    Result.LifetimePassSuccess
+                }
+            }
+            HttpURLConnection.HTTP_CONFLICT -> Result.Used
+            HttpURLConnection.HTTP_GONE -> Result.Expired
+            HttpURLConnection.HTTP_NOT_FOUND,
+            HttpURLConnection.HTTP_BAD_REQUEST -> Result.Invalid
+            else -> Result.Error
+        }
     }
 
     /** 비동기 [SkinDownloader.download]를 래치로 감싸 동기 대기한다(이미 백그라운드 스레드에서 호출됨). */

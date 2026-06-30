@@ -18,9 +18,15 @@ object BillingConfig {
     /** 보호 다운로드 엔드포인트 경로(Worker src/index.js의 라우트와 일치). */
     const val DOWNLOAD_PATH = "/v1/skins/download"
 
+    /** 평생이용권 기프트코드 서버 검증 엔드포인트 경로. */
+    const val REDEEM_PATH = "/v1/redeem"
+
     /** Worker 주소가 설정돼 있는지(미설정이면 유료 다운로드를 시도하지 않는다). */
     val isConfigured: Boolean get() = WORKER_BASE_URL.isNotBlank()
 
     /** 보호 다운로드 전체 URL. */
     val downloadUrl: String get() = WORKER_BASE_URL.trimEnd('/') + DOWNLOAD_PATH
+
+    /** 기프트코드 검증 전체 URL. */
+    val redeemUrl: String get() = WORKER_BASE_URL.trimEnd('/') + REDEEM_PATH
 }
