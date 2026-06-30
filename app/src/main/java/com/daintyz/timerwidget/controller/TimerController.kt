@@ -170,7 +170,7 @@ object TimerController {
     }
 
     /** 완료 알림을 스와이프해 지웠을 때 소리·진동 반복만 멈추고 COMPLETE 상태는 유지한다. */
-    fun dismissCompleteNotification(context: Context) {
+    fun dismissCompleteNotification() {
         CompletionFeedback.stop()
     }
 

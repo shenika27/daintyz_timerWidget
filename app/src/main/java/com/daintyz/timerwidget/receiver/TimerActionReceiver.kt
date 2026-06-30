@@ -20,7 +20,7 @@ class TimerActionReceiver : BroadcastReceiver() {
             ACTION_START_PAUSE -> TimerController.startOrPause(context)
             ACTION_STOP_RESET -> TimerController.stopReset(context)
             ACTION_TAP_COMPLETE -> TimerController.resetFromComplete(context)
-            ACTION_DISMISS_COMPLETE -> TimerController.dismissCompleteNotification(context)
+            ACTION_DISMISS_COMPLETE -> TimerController.dismissCompleteNotification()
             ACTION_ALARM_CHECK -> {
                 // 화면 꺼짐 중 완료 시점 깨어남(또는 사망 복구): 서비스가 평가하도록 재시작.
                 TimerForegroundService.resync(context)
