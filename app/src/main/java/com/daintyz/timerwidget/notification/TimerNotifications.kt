@@ -35,7 +35,10 @@ object TimerNotifications {
             CHANNEL_PROGRESS,
             context.getString(R.string.notif_channel_progress_name),
             NotificationManager.IMPORTANCE_LOW // 진행 알림은 조용하게
-        ).apply { description = context.getString(R.string.notif_channel_progress_desc) }
+        ).apply {
+            description = context.getString(R.string.notif_channel_progress_desc)
+            setShowBadge(false)
+        }
 
         val complete = NotificationChannel(
             CHANNEL_COMPLETE,
@@ -43,6 +46,7 @@ object TimerNotifications {
             NotificationManager.IMPORTANCE_HIGH // 완료는 눈에 띄게(헤드업), 단 소리·진동은 앱이 직접 제어
         ).apply {
             description = context.getString(R.string.notif_channel_complete_desc)
+            setShowBadge(false)
             // 소리·진동은 CompletionFeedback이 인앱 토글에 따라 재생 → 채널은 무음·무진동(이중 재생 방지).
             // 참고: 채널은 생성 후 변경 불가라 기존 설치본은 이전 설정이 남는다(신규 설치/재설치부터 적용).
             setSound(null, null)
@@ -64,6 +68,7 @@ object TimerNotifications {
             .setOnlyAlertOnce(true)
             .setContentIntent(openAppIntent(context))
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_NONE)
             .build()
     }
 
@@ -75,9 +80,13 @@ object TimerNotifications {
             PackageManager.PERMISSION_GRANTED
         ) return
 
-        ensureChannels(context)
         val manager = context.getSystemService<NotificationManager>() ?: return
-        val notification = NotificationCompat.Builder(context, CHANNEL_COMPLETE)
+        runCatching { manager.notify(NOTIF_ID_COMPLETE, buildCompleteNotification(context)) }
+    }
+
+    fun buildCompleteNotification(context: Context): Notification {
+        ensureChannels(context)
+        return NotificationCompat.Builder(context, CHANNEL_COMPLETE)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(context.getString(R.string.notif_complete_title))
             .setContentText(context.getString(R.string.notif_complete_text))
@@ -90,8 +99,8 @@ object TimerNotifications {
                 completeDoneIntent(context)
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_NONE)
             .build()
-        runCatching { manager.notify(NOTIF_ID_COMPLETE, notification) }
     }
 
     fun cancelComplete(context: Context) {

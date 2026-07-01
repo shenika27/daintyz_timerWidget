@@ -88,8 +88,8 @@ class TimerForegroundService : Service() {
         when (data.state) {
             TimerState.RUNNING -> {
                 if (now >= data.targetEndElapsed) {
+                    removeForegroundNotification()
                     TimerController.complete(this) // → COMPLETE 전환 + 알림 + 위젯 갱신
-                    updateForegroundNotification(getString(com.daintyz.timerwidget.R.string.notif_complete_title))
                     scheduleNextIfScreenOn()
                 } else {
                     val remaining = data.targetEndElapsed - now
@@ -138,21 +138,28 @@ class TimerForegroundService : Service() {
         if (foregroundStarted) return
         val data = TimerPreferences.get(this).load()
         val now = SystemClock.elapsedRealtime()
-        val text = if (data.state == TimerState.RUNNING) {
-            formatRemaining(data.targetEndElapsed - now)
+        val notificationId: Int
+        val notification = if (data.state == TimerState.COMPLETE) {
+            notificationId = TimerNotifications.NOTIF_ID_COMPLETE
+            TimerNotifications.buildCompleteNotification(this)
         } else {
-            getString(com.daintyz.timerwidget.R.string.notif_progress_title)
+            val text = if (data.state == TimerState.RUNNING) {
+                formatRemaining(data.targetEndElapsed - now)
+            } else {
+                getString(com.daintyz.timerwidget.R.string.notif_progress_title)
+            }
+            notificationId = TimerNotifications.NOTIF_ID_PROGRESS
+            TimerNotifications.buildProgressNotification(this, text)
         }
-        val notification = TimerNotifications.buildProgressNotification(this, text)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             ServiceCompat.startForeground(
                 this,
-                TimerNotifications.NOTIF_ID_PROGRESS,
+                notificationId,
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             )
         } else {
-            startForeground(TimerNotifications.NOTIF_ID_PROGRESS, notification)
+            startForeground(notificationId, notification)
         }
         foregroundStarted = true
     }
@@ -176,11 +183,16 @@ class TimerForegroundService : Service() {
         return "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
     }
 
+    private fun removeForegroundNotification() {
+        if (!foregroundStarted) return
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        foregroundStarted = false
+    }
+
     private fun stopCleanly() {
         handler.removeCallbacks(tickRunnable)
         AlarmScheduler.cancel(this)
-        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-        foregroundStarted = false
+        removeForegroundNotification()
         stopSelf()
     }
 
