@@ -1,13 +1,16 @@
 package com.daintyz.timerwidget.notification
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.CombinedVibration
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.os.VibrationEffect
+import android.os.VibrationAttributes
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.content.getSystemService
@@ -96,13 +99,36 @@ object CompletionFeedback {
     }
 
     private fun vibrate(context: Context) {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            context.getSystemService<VibratorManager>()?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService<Vibrator>()
-        } ?: return
-        if (!vibrator.hasVibrator()) return
-        vibrator.vibrate(VibrationEffect.createOneShot(400L, VibrationEffect.DEFAULT_AMPLITUDE))
+        runCatching {
+            val effect = VibrationEffect.createWaveform(
+                longArrayOf(0L, 250L, 120L, 350L),
+                intArrayOf(
+                    0,
+                    VibrationEffect.DEFAULT_AMPLITUDE,
+                    0,
+                    VibrationEffect.DEFAULT_AMPLITUDE
+                ),
+                -1
+            )
+            val attributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val manager = context.getSystemService<VibratorManager>() ?: return
+                val vibrator = manager.defaultVibrator
+                if (!vibrator.hasVibrator()) return
+                val vibrationAttributes = VibrationAttributes.Builder()
+                    .setUsage(VibrationAttributes.USAGE_ALARM)
+                    .build()
+                manager.vibrate(CombinedVibration.createParallel(effect), vibrationAttributes)
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = context.getSystemService<Vibrator>() ?: return
+                if (!vibrator.hasVibrator()) return
+                vibrator.vibrate(effect, attributes)
+            }
+        }
     }
 }
